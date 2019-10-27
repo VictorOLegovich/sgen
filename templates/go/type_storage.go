@@ -31,12 +31,12 @@ func (template *Template) mainTemplate(Struct collection.Struct) (temp string) {
 }
 
 func (*Template) storagetype(structname string) string {
-	return "type " + structname + "Storage struct{\n\tDataBase\tstring\n}\n\n"
+	return "type " + structname + "Storage struct {\n\tDataBase string\n}\n\n"
 }
 
 func (*Template) newstorage(structname string) string {
 	return "func New" + structname + "Storage(DB string) *" + structname + "Storage {\n\treturn &" +
-		structname + "Storage{ DataBase:DB }\n}\n\n"
+		structname + "Storage{DataBase: DB}\n}\n\n"
 }
 
 func (*Template) packaging(structname string) string {

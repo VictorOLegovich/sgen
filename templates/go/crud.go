@@ -23,28 +23,28 @@ func (template *Template) getcrudlist() crudlist {
 }
 
 func (template *Template) c(Struct collection.Struct) string {
-	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
-		"Create" + Struct.Name + "(" + template.parameters(Struct.Fields) + ") " +
-		" bool{\n\treturn true \n}\n\n"
+	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage) " +
+		"Create" + Struct.Name + "(" + template.parameters(Struct.Fields) + ")" +
+		" bool {\n\treturn true \n}\n\n"
 }
 
 func (template *Template) r(Struct collection.Struct) string {
-	ReadOne := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
-		"ReadOne" + Struct.Name + "(ID int) " + Struct.Name + "{\n\treturn " + Struct.Name + "{}\n}\n\n"
+	ReadOne := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage) " +
+		"ReadOne" + Struct.Name + "(ID int) " + Struct.Name + " {\n\treturn " + Struct.Name + "{}\n}\n\n"
 
-	ReadAll := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
-		"Read" + Struct.Name + "List() []" + Struct.Name + "{\n\treturn []" + Struct.Name + "{}\n}\n\n"
+	ReadAll := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage) " +
+		"Read" + Struct.Name + "List() []" + Struct.Name + " {\n\treturn []" + Struct.Name + "{}\n}\n\n"
 
 	return ReadOne + ReadAll
 }
 
 func (template *Template) u(Struct collection.Struct) string {
-	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)Update" + Struct.Name +
+	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage) Update" + Struct.Name +
 		"(Field, Value string) bool {\n\treturn true \n}\n\n"
 }
 
 func (template *Template) d(Struct collection.Struct) string {
-	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)Delete" + Struct.Name +
+	return "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage) Delete" + Struct.Name +
 		"(ID int) bool {\n\treturn true\n}\n\n"
 }
 

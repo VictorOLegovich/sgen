@@ -45,7 +45,7 @@ func (template *Template) getByParentId(Struct collection.Struct) (withParent st
 			if schema.Current == child.StructName {
 				withParent += "func (" + schema.Current + "Storage *" + schema.Current + "Storage) Get" + child.Name +
 					"By" + parent.StructName + "ID(" + parent.StructName + "Id int) (" + child.Name + " " +
-					child.Type + "){\n\treturn " + child.Name + "\n}\n\n"
+					child.Type + ") {\n\treturn " + child.Name + "\n}\n\n"
 
 			}
 		}
@@ -68,12 +68,18 @@ func (template *Template) getWithChildes(Struct collection.Struct) string {
 	}
 
 	getOne := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
-		"GetOne" + Struct.Name + "WithChildes(" + Struct.Name + "ID int) " + Struct.Name + "{\n\t" +
+		"GetOne" + Struct.Name + "WithChildes(" + Struct.Name + "ID int) " + Struct.Name + " {\n\t" +
 		schema.Current + " := " + schema.Current + "Storage.ReadOne" + schema.Current + "(" + Struct.Name + "ID)\n\n"
 
-	//getAll := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
-	//	"Get" + Struct.Name + "ListWithChildes() []*" + Struct.Name + "{\n" +
-	//	schema.Current + "List := " + schema.Current + "Storage.Read" + schema.Current + "List()\n"
+	getAll := "func (" + Struct.Name + "Storage *" + Struct.Name + "Storage)" +
+		"Get" + Struct.Name + "ListWithChildes() []" + Struct.Name + " {\n" +
+		"\t" + schema.Current + "List := " + schema.Current + "Storage.Read" + schema.Current + "List()\n" +
+		"\t" + schema.Current + "Buffer := make([]" + schema.Current + ", len(" + schema.Current + "List))\n\n" +
+		"\tfor _, " + strings.ToLower(schema.Current) + " := range " + schema.Current + "List {" +
+		"\t\t" + strings.ToLower(schema.Current) + " = " + schema.Current + "Storage.GetOne" + schema.Current +
+		"WithChildes(" + strings.ToLower(schema.Current) + ".ID)\n\t\t" + schema.Current +
+		"Buffer = append(" + schema.Current + "Buffer," + strings.ToLower(schema.Current) + ")\n\t}\n\n" +
+		"\t return " + schema.Current + "Buffer\n}\n\n"
 
 	for _, child := range schema.Childes {
 		storageVar := strings.ToLower(child.StructName) + "Storage"
@@ -91,8 +97,8 @@ func (template *Template) getWithChildes(Struct collection.Struct) string {
 
 	}
 
-	getOne += storagesInit + "\n" + storagesCallable + "\n" + getting + "\n" + adding + "\n"
-	getOne += "\treturn " + schema.Current + "\n}\n\n"
+	getOne += storagesInit + "\n" + storagesCallable + "\n" + getting + "\n" + adding +
+		"\n\treturn " + schema.Current + "\n}\n\n"
 
-	return getOne
+	return getOne + getAll
 }

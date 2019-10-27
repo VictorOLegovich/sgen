@@ -27,7 +27,7 @@ func NewTemplate(Collection collection.Collection) *Template {
 			ImportAliases: settings.ImportAliases{
 				DataImportAlias:    "github.com/victorolegovich/test/data",
 				StorageImportAlias: "github.com/victorolegovich/test/storage",
-				ImportAlias:        "github.com/victorolegovich/test",
+				ProjectImportAlias: "github.com/victorolegovich/test",
 			},
 		},
 	}
