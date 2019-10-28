@@ -1,10 +1,13 @@
 package parser
 
 import (
+	"fmt"
 	c "github.com/victorolegovich/storage_generator/collection"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
+	"os"
 )
 
 func Parse(filename string, collection *c.Collection) error {
@@ -16,14 +19,17 @@ func Parse(filename string, collection *c.Collection) error {
 
 	//_ = ast.Print(fset, file)
 
-	inspecting(file, collection)
+	//если нет поля ID, добавляем его в файл
+	if pos := inspecting(file, collection); pos != 0 {
+		addToFile(filename, pos)
+	}
 
 	collection.CompletingRootSchemas()
 
 	return nil
 }
 
-func inspecting(file *ast.File, collection *c.Collection) {
+func inspecting(file *ast.File, collection *c.Collection) (pos int) {
 
 	ast.Inspect(file, func(node ast.Node) bool {
 		var Struct c.Struct
@@ -37,6 +43,10 @@ func inspecting(file *ast.File, collection *c.Collection) {
 			switch s := n.Type.(type) {
 
 			case *ast.StructType:
+				if !hasID(s.Fields) {
+					pos = int(s.Struct)
+				}
+
 				Struct.Name, RootSchema.Current = n.Name.Name, n.Name.Name
 				Struct.Fields, RootSchema.Childes, Struct.Complicated = fillFlds(s)
 
@@ -47,6 +57,7 @@ func inspecting(file *ast.File, collection *c.Collection) {
 
 		return true
 	})
+	return pos
 }
 
 //fields filling
@@ -57,8 +68,6 @@ func fillFlds(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Comp
 	Complicated = map[string]c.Complicated{}
 
 	for _, field := range s.Fields.List {
-		//не до конца уверен, что так правильно, но это работает.
-		//так мы получаем безымянные поля(то есть структуры и интерфейсы)
 		if len(field.Names) == 0 {
 
 			switch ftype := field.Type.(type) {
@@ -71,7 +80,6 @@ func fillFlds(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Comp
 		}
 
 		for _, ident := range field.Names {
-
 			Field.Name = ident.Name
 
 			comp, child := defineFieldType(field, &Field)
@@ -99,6 +107,19 @@ func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicate
 	//Простой тип
 	case *ast.Ident:
 		Field.Type = ftype.Name
+
+		//Усложнился вложенной структурой
+		if ftype.Obj != nil {
+			switch decl := ftype.Obj.Decl.(type) {
+
+			case *ast.TypeSpec:
+				switch decl.Type.(type) {
+				case *ast.StructType:
+					Field.Type = decl.Name.Name
+					child.StructName = decl.Name.Name
+				}
+			}
+		}
 
 	case *ast.InterfaceType:
 		if len(ftype.Methods.List) == 0 {
@@ -156,16 +177,19 @@ func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicate
 		switch arrname := ftype.Elt.(type) {
 
 		case *ast.Ident:
+
 			if arrayLen != "" {
 				Field.Type = "[" + arrayLen + "]" + arrname.Name
 			} else {
 				Field.Type = "[]" + arrname.Name
 			}
-			switch decl := arrname.Obj.Decl.(type) {
-			case *ast.TypeSpec:
-				switch decl.Type.(type) {
-				case *ast.StructType:
-					child.StructName = arrname.Name
+			if arrname.Obj != nil {
+				switch decl := arrname.Obj.Decl.(type) {
+				case *ast.TypeSpec:
+					switch decl.Type.(type) {
+					case *ast.StructType:
+						child.StructName = arrname.Name
+					}
 				}
 			}
 
@@ -197,4 +221,42 @@ func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicate
 	}
 
 	return complicated, child
+}
+
+func hasID(fields *ast.FieldList) bool {
+	for _, field := range fields.List {
+		for _, ident := range field.Names {
+			if ident.Name == "ID" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func addToFile(filename string, pos int) {
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	info, _ := file.Stat()
+	data := make([]byte, info.Size())
+
+	for {
+		_, err := file.Read(data)
+
+		if err == io.EOF {
+			break
+		}
+	}
+	_ = file.Close()
+
+	adding := "\n\tID int\n"
+	writing := string(data[:pos+7]) + adding + string(data[pos+len(adding)-1:])
+
+	file, _ = os.OpenFile(filename, os.O_WRONLY, os.ModeAppend)
+	_, _ = file.WriteString(writing)
+
+	_ = file.Close()
 }

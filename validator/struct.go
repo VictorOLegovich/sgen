@@ -79,6 +79,7 @@ func typeVerify(Field c.Field) string {
 		if !types.IsSimpleType(typename) {
 			return typename
 		}
+		return ""
 	}
 
 	if result, maptype := types.IsMap(ftype); result {
