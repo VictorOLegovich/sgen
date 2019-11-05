@@ -8,7 +8,7 @@ import (
 func (template *Template) Create() (files []File) {
 	file := File{}
 	for _, Struct := range template.collection.Structs {
-		file.owner = Struct.Name
+		file.Owner = Struct.Name
 		file.Path = template.settings.StorageDir + "/" + strings.ToLower(Struct.Name) + "_storage"
 		file.Name = strings.ToLower(Struct.Name) + "_storage.go"
 		file.Src = template.mainTemplate(Struct)

@@ -1,16 +1,46 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	c "github.com/victorolegovich/storage_generator/collection"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io"
+	"io/ioutil"
 	"os"
 )
 
-func Parse(filename string, collection *c.Collection) error {
+func Parse(dir string, collection *c.Collection) error {
+	var (
+		errText string
+		errs    []error
+	)
+
+	files, err := ioutil.ReadDir(dir)
+
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		if err = parse(dir+"/"+file.Name(), collection); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	for _, e := range errs {
+		errText += e.Error() + "\n"
+	}
+
+	if errText != "" {
+		return errors.New(errText)
+	}
+	return nil
+}
+
+func parse(filename string, collection *c.Collection) error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {

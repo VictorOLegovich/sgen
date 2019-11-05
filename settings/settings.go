@@ -1,7 +1,9 @@
 package settings
 
 import (
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"strings"
 )
 
@@ -11,37 +13,54 @@ const (
 )
 
 type Settings struct {
-	Path
+	Path `json:"path"`
 	ImportAliases
-	SqlDriver   string
-	PackageMode int
+	SqlDriver  string `json:"sql_driver"`
+	AutoDelete bool   `json:"auto_delete"`
 }
 
 type Path struct {
-	ProjectDir string
-	DataDir    string
-	StorageDir string
+	ProjectDir string `json:"project_dir"`
+	DataDir    string `json:"data_dir"`
+	StorageDir string `json:"storage_dir"`
 }
 
 type ImportAliases struct {
-	DataImportAlias    string
-	StorageImportAlias string
-	ProjectImportAlias string
+	DataIA    string
+	StorageIA string
+	ProjectIA string
 }
 
-func (settings *Settings) AliasingImports() error {
+func New(file string) (s Settings, e error) {
+	src, e := ioutil.ReadFile(file)
+	if e != nil {
+		return s, e
+	}
+
+	if e = json.Unmarshal(src, &s); e != nil {
+		return s, e
+	}
+
+	if e = s.aliasingImports(); e != nil {
+		return s, e
+	}
+
+	return s, e
+}
+
+func (settings *Settings) aliasingImports() error {
 	if settings.DataDir == "" || settings.ProjectDir == "" {
 		return errors.New("Не установлены пути ")
 	}
 
 	if strings.Contains(settings.ProjectDir, "go/src") {
-		settings.ProjectImportAlias = extractImport(settings.ProjectDir)
+		settings.ProjectIA = extractImport(settings.ProjectDir)
 	}
 	if strings.Contains(settings.DataDir, "go/src") {
-		settings.DataImportAlias = extractImport(settings.DataDir)
+		settings.DataIA = extractImport(settings.DataDir)
 	}
 	if strings.Contains(settings.StorageDir, "go/src") {
-		settings.StorageImportAlias = extractImport(settings.StorageDir)
+		settings.StorageIA = extractImport(settings.StorageDir)
 	}
 
 	return nil
@@ -56,7 +75,7 @@ func extractImport(path string) string {
 		}
 
 		if path[b:e] == "go/src" {
-			return path[e:]
+			return path[e+1:]
 		}
 
 		b, e = b-1, e-1

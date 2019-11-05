@@ -20,11 +20,11 @@ func (template *Template) imports(Struct collection.Struct) (imports string) {
 	}
 
 	imports += "import (\n"
-	imports += "\t. \"" + template.settings.DataImportAlias + "/" + template.collection.DataPackage + "\"\n"
+	imports += "\t. \"" + template.settings.DataIA + "\"\n"
 
 	for _, child := range schema.Childes {
 		if !isImported(imported, child.StructName) {
-			imports += "\t\"" + template.settings.StorageImportAlias + "/" + strings.ToLower(child.StructName) + "_storage\"\n"
+			imports += "\t\"" + template.settings.StorageIA + "/" + strings.ToLower(child.StructName) + "_storage\"\n"
 			imported = append(imported, child.StructName)
 		}
 	}

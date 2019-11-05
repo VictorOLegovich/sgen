@@ -11,7 +11,7 @@ type Template struct {
 }
 
 type File struct {
-	owner, Name, Src, Path string
+	Owner, Name, Src, Path string
 }
 
 func NewTemplate(Collection collection.Collection, s settings.Settings) *Template {

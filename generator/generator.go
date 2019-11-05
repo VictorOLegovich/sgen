@@ -3,14 +3,15 @@ package generator
 import (
 	"errors"
 	"github.com/victorolegovich/storage_generator/collection"
-	reg "github.com/victorolegovich/storage_generator/generator/register"
 	"github.com/victorolegovich/storage_generator/parser"
+	reg "github.com/victorolegovich/storage_generator/register"
 	"github.com/victorolegovich/storage_generator/settings"
 	_go "github.com/victorolegovich/storage_generator/templates/go"
 	"github.com/victorolegovich/storage_generator/validator"
-	"io/ioutil"
 	"os"
 )
+
+const config = "/home/victor/go/src/github.com/victorolegovich/test/config/user.json"
 
 type genSection int
 
@@ -40,20 +41,27 @@ type Generator struct {
 }
 
 func (gen *Generator) Generate() error {
+	s, e := settings.New(config)
+
+	if e != nil {
+		return e
+	}
+
+	gen.settings = s
+	gen.processError = map[genSection]error{}
+
 	c := &collection.Collection{}
-	r := reg.NewRegister()
-	rObj := reg.NewRegObject()
+	r, e := reg.NewRegister()
+	if e != nil {
+		gen.processError[register] = e
+	}
+	rObj := &reg.RegObject{}
+	rObj.Entistor = map[string]string{}
 
 	if err := parser.Parse(gen.settings.Path.DataDir, c); err != nil {
 		gen.processError[parsing] = err
 	} else {
-		rObj.Name = c.DataPackage
-		files, _ := ioutil.ReadDir(gen.settings.DataDir)
-		for _, file := range files {
-			if err = rObj.AddToDataFilesState(gen.settings.DataDir + "/" + file.Name()); err != nil {
-				gen.processError[register].Error()
-			}
-		}
+		rObj.Package = c.DataPackage
 	}
 
 	if err := validator.StructsValidation(c.Structs); err != nil {
@@ -70,10 +78,7 @@ func (gen *Generator) Generate() error {
 		}
 
 		if f, err := os.Create(file.Path + "/" + file.Name); err == nil {
-
-			if err = rObj.AddToStorageFilesState(file.Path + "/" + file.Name); err != nil {
-				gen.processError[register] = err
-			}
+			rObj.Entistor[file.Owner] = file.Path
 
 			if _, err = f.Write([]byte(file.Src)); err != nil {
 				gen.processError[templating] = err
@@ -83,8 +88,16 @@ func (gen *Generator) Generate() error {
 		}
 	}
 
-	if err := r.AddObject(*rObj); err != nil {
+	r.AddObject(*rObj)
 
+	if err := r.Save(); err != nil {
+		gen.processError[register] = err
+	}
+
+	if gen.settings.AutoDelete {
+		for _, del := range r.Deleted {
+			_ = os.RemoveAll(del)
+		}
 	}
 
 	return errorConverting(gen.processError)
