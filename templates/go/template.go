@@ -1,8 +1,8 @@
 package _go
 
 import (
-	"github.com/victorolegovich/storage_generator/collection"
-	"github.com/victorolegovich/storage_generator/settings"
+	"github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/settings"
 )
 
 type Template struct {

@@ -2,16 +2,14 @@ package generator
 
 import (
 	"errors"
-	"github.com/victorolegovich/storage_generator/collection"
-	"github.com/victorolegovich/storage_generator/parser"
-	reg "github.com/victorolegovich/storage_generator/register"
-	"github.com/victorolegovich/storage_generator/settings"
-	_go "github.com/victorolegovich/storage_generator/templates/go"
-	"github.com/victorolegovich/storage_generator/validator"
+	"github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/parser"
+	reg "github.com/victorolegovich/sgen/register"
+	"github.com/victorolegovich/sgen/settings"
+	_go "github.com/victorolegovich/sgen/templates/go"
+	"github.com/victorolegovich/sgen/validator"
 	"os"
 )
-
-const config = "/home/victor/go/src/github.com/victorolegovich/test/config/user.json"
 
 type genSection int
 
@@ -40,8 +38,8 @@ type Generator struct {
 	processError
 }
 
-func (gen *Generator) Generate() error {
-	s, e := settings.New(config)
+func (gen *Generator) Generate(file string) error {
+	s, e := settings.New(file)
 
 	if e != nil {
 		return e

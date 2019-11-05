@@ -2,8 +2,8 @@ package validator
 
 import (
 	"errors"
-	c "github.com/victorolegovich/storage_generator/collection"
-	"github.com/victorolegovich/storage_generator/types"
+	c "github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/types"
 )
 
 func StructsValidation(Structs []c.Struct) error {

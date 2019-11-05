@@ -1,11 +1,9 @@
 package main
 
-import "github.com/victorolegovich/storage_generator/generator"
+import "github.com/victorolegovich/sgen/sgen_cli"
 
 func main() {
-	g := generator.Generator{}
-	if err := g.Generate(); err != nil {
+	if err := sgen_cli.Run(); err != nil {
 		println(err.Error())
 	}
-
 }

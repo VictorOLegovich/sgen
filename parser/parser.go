@@ -3,7 +3,7 @@ package parser
 import (
 	"errors"
 	"fmt"
-	c "github.com/victorolegovich/storage_generator/collection"
+	c "github.com/victorolegovich/sgen/collection"
 	"go/ast"
 	"go/parser"
 	"go/token"

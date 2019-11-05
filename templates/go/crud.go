@@ -1,7 +1,7 @@
 package _go
 
 import (
-	"github.com/victorolegovich/storage_generator/collection"
+	"github.com/victorolegovich/sgen/collection"
 )
 
 func (template *Template) crud(Struct collection.Struct) (crud string) {

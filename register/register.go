@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const pathToRegister = "/home/victor/go/src/github.com/victorolegovich/storage_generator/register/register"
+const pathToRegister = "/home/victor/go/src/github.com/victorolegovich/sgen/register/register"
 const format = "reg"
 
 type Register struct {
