@@ -2,12 +2,12 @@ package generator
 
 import (
 	"errors"
-	"github.com/victorolegovichs/sgen/collection"
-	"github.com/victorolegovichs/sgen/parser"
-	reg "github.com/victorolegovichs/sgen/register"
-	"github.com/victorolegovichs/sgen/settings"
-	_go "github.com/victorolegovichs/sgen/templates/go"
-	"github.com/victorolegovichs/sgen/validator"
+	"github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/parser"
+	reg "github.com/victorolegovich/sgen/register"
+	"github.com/victorolegovich/sgen/settings"
+	_go "github.com/victorolegovich/sgen/templates/go"
+	"github.com/victorolegovich/sgen/validator"
 	"os"
 )
 
