@@ -2,6 +2,7 @@ package _go
 
 import (
 	"github.com/victorolegovich/sgen/collection"
+	"path/filepath"
 	"strings"
 )
 
@@ -9,7 +10,7 @@ func (template *Template) Create() (files []File) {
 	file := File{}
 	for _, Struct := range template.collection.Structs {
 		file.Owner = Struct.Name
-		file.Path = template.settings.StorageDir + "/" + strings.ToLower(Struct.Name) + "_storage"
+		file.Path = filepath.Join(template.settings.StorageDir, strings.ToLower(Struct.Name)+"_storage")
 		file.Name = strings.ToLower(Struct.Name) + "_storage.go"
 		file.Src = template.mainTemplate(Struct)
 		files = append(files, file)

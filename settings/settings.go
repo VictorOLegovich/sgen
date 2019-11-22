@@ -4,8 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 )
+
+const SettingsSRC = `{
+  "path": {
+    "project_dir": "",
+    "data_dir": "",
+    "storage_dir": ""
+  },
+  "sql_driver": "",
+  "auto_delete": false
+}`
 
 const (
 	MySQL      = "MySQL"
@@ -49,17 +61,19 @@ func New(file string) (s Settings, e error) {
 }
 
 func (settings *Settings) aliasingImports() error {
+	prefix := filepath.Join("go", "src")
+
 	if settings.DataDir == "" || settings.ProjectDir == "" {
 		return errors.New("Не установлены пути ")
 	}
 
-	if strings.Contains(settings.ProjectDir, "go/src") {
+	if strings.Contains(settings.ProjectDir, prefix) {
 		settings.ProjectIA = extractImport(settings.ProjectDir)
 	}
-	if strings.Contains(settings.DataDir, "go/src") {
+	if strings.Contains(settings.DataDir, prefix) {
 		settings.DataIA = extractImport(settings.DataDir)
 	}
-	if strings.Contains(settings.StorageDir, "go/src") {
+	if strings.Contains(settings.StorageDir, prefix) {
 		settings.StorageIA = extractImport(settings.StorageDir)
 	}
 
@@ -74,12 +88,24 @@ func extractImport(path string) string {
 			return ""
 		}
 
-		if path[b:e] == "go/src" {
-			return path[e+1:]
+		if path[b:e] == filepath.Join("go", "src") {
+			return changeSeparator(path[e+1:])
 		}
 
 		b, e = b-1, e-1
 	}
 
 	return ""
+}
+
+func changeSeparator(path string) string {
+	var newpath strings.Builder
+	pathways := strings.Split(path, string(os.PathSeparator))
+	for k, pw := range pathways {
+		newpath.WriteString(pw)
+		if k < len(pathways)-1 {
+			newpath.WriteString("/")
+		}
+	}
+	return newpath.String()
 }

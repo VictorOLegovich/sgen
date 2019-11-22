@@ -4,10 +4,10 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
-const pathToRegister = "/home/victor/go/src/github.com/victorolegovich/sgen/register/register"
 const format = "reg"
 
 type Register struct {
@@ -80,7 +80,7 @@ func (r *Register) Save() error {
 	var filePath, src string
 
 	if object, err := r.GetObject(r.changed); err == nil {
-		filePath = pathToRegister + "/" + object.Package + "." + format
+		filePath, _ = filepath.Abs("../register/register/" + object.Package + "." + format)
 		for s, path := range object.Entistor {
 			src += s + ":" + path + "\n"
 		}
@@ -108,7 +108,8 @@ func (r *Register) hasDeletedStructs(existingObject, addedObject RegObject) map[
 func getObjects() (objects []RegObject, e error) {
 	var object RegObject
 
-	files, e := ioutil.ReadDir(pathToRegister)
+	fp, _ := filepath.Abs("../register/register")
+	files, e := ioutil.ReadDir(fp)
 	if e != nil {
 		return objects, e
 	}
@@ -118,7 +119,7 @@ func getObjects() (objects []RegObject, e error) {
 		if len(ff) > 0 {
 			if ff[1] == format {
 				object.Package = ff[0]
-				object.Entistor = read(pathToRegister + "/" + file.Name())
+				object.Entistor = read(filepath.Join(fp, file.Name()))
 				objects = append(objects, object)
 			}
 		}

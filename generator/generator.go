@@ -9,6 +9,7 @@ import (
 	_go "github.com/victorolegovich/sgen/templates/go"
 	"github.com/victorolegovich/sgen/validator"
 	"os"
+	"path/filepath"
 )
 
 type genSection int
@@ -75,7 +76,7 @@ func (gen *Generator) Generate(file string) error {
 			}
 		}
 
-		if f, err := os.Create(file.Path + "/" + file.Name); err == nil {
+		if f, err := os.Create(filepath.Join(file.Path, file.Name)); err == nil {
 			rObj.Entistor[file.Owner] = file.Path
 
 			if _, err = f.Write([]byte(file.Src)); err != nil {
@@ -105,7 +106,7 @@ func errorConverting(pErr processError) error {
 	var errorText string
 
 	for section, err := range pErr {
-		errorText += section.string() + " section of generating: \n\t" + err.Error() + "\n"
+		errorText += section.string() + " section of generating process: \n\t" + err.Error() + "\n"
 	}
 
 	if errorText != "" {

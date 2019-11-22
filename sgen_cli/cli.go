@@ -4,7 +4,9 @@ import (
 	"errors"
 	"github.com/urfave/cli"
 	"github.com/victorolegovich/sgen/generator"
+	"github.com/victorolegovich/sgen/settings"
 	"os"
+	"path/filepath"
 )
 
 func Run() error {
@@ -25,6 +27,29 @@ func Run() error {
 				}
 
 				return nil
+			},
+		},
+		{
+			Name:    "gs",
+			Aliases: []string{"settings"},
+			Usage:   "getting settings file",
+			Action: func(c *cli.Context) error {
+				targetDir, err := filepath.Abs(c.Args().First())
+				if err != nil {
+					return err
+				}
+
+				if _, err := os.Stat(c.Args().First()); os.IsNotExist(err) {
+					return errors.New("Dir is not exist: " + c.Args().First())
+				}
+
+				file, err := os.Create(filepath.Join(targetDir, "settings.json"))
+				if err != nil {
+					return err
+				}
+
+				_, err = file.WriteString(settings.SettingsSRC)
+				return err
 			},
 		},
 	}

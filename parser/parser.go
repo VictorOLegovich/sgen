@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 func Parse(dir string, collection *c.Collection) error {
@@ -25,8 +27,12 @@ func Parse(dir string, collection *c.Collection) error {
 	}
 
 	for _, file := range files {
-		if err = parse(dir+"/"+file.Name(), collection); err != nil {
-			errs = append(errs, err)
+		if !file.IsDir() {
+			if strings.Split(file.Name(), ".")[1] == "go" {
+				if err = parse(filepath.Join(dir, file.Name()), collection); err != nil {
+					errs = append(errs, err)
+				}
+			}
 		}
 	}
 
