@@ -32,15 +32,15 @@ type Settings struct {
 }
 
 type Path struct {
-	ProjectDir string `json:"project_dir"`
-	DataDir    string `json:"data_dir"`
-	StorageDir string `json:"storage_dir"`
+	ProjectDir  string `json:"project_dir"`
+	DataDir     string `json:"data_dir"`
+	DatabaseDir string `json:"database_dir"`
 }
 
 type ImportAliases struct {
-	DataIA    string
-	StorageIA string
-	ProjectIA string
+	DataIA     string
+	DatabaseIA string
+	ProjectIA  string
 }
 
 func New(file string) (s Settings, e error) {
@@ -73,8 +73,8 @@ func (settings *Settings) aliasingImports() error {
 	if strings.Contains(settings.DataDir, prefix) {
 		settings.DataIA = extractImport(settings.DataDir)
 	}
-	if strings.Contains(settings.StorageDir, prefix) {
-		settings.StorageIA = extractImport(settings.StorageDir)
+	if strings.Contains(settings.DatabaseDir, prefix) {
+		settings.DatabaseIA = extractImport(settings.DatabaseDir)
 	}
 
 	return nil

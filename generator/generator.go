@@ -2,12 +2,16 @@ package generator
 
 import (
 	"errors"
+	"fmt"
 	"github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/file_manager"
 	"github.com/victorolegovich/sgen/parser"
 	reg "github.com/victorolegovich/sgen/register"
 	"github.com/victorolegovich/sgen/settings"
 	_go "github.com/victorolegovich/sgen/templates/go"
 	"github.com/victorolegovich/sgen/validator"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -17,14 +21,14 @@ type genSection int
 const (
 	parsing genSection = iota
 	validating
-	templating
+	deploying
 	register
 )
 
 var gsToString = map[genSection]string{
 	parsing:    "parsing",
 	validating: "validating",
-	templating: "templating",
+	deploying:  "deploying",
 	register:   "register",
 }
 
@@ -41,14 +45,12 @@ type Generator struct {
 
 func (gen *Generator) Generate(file string) error {
 	s, e := settings.New(file)
-
 	if e != nil {
 		return e
 	}
 
 	gen.settings = s
 	gen.processError = map[genSection]error{}
-
 	c := &collection.Collection{}
 	r, e := reg.NewRegister()
 	if e != nil {
@@ -69,22 +71,10 @@ func (gen *Generator) Generate(file string) error {
 
 	template := _go.NewTemplate(*c, gen.settings)
 
-	for _, file := range template.Create() {
-		if _, err := os.Stat(file.Path); os.IsNotExist(err) {
-			if err = os.Mkdir(file.Path, os.ModePerm); err != nil {
-				gen.processError[templating] = err
-			}
-		}
+	depl := file_manager.NewFileManger(s, template.Create(), rObj)
 
-		if f, err := os.Create(filepath.Join(file.Path, file.Name)); err == nil {
-			rObj.Entistor[file.Owner] = file.Path
-
-			if _, err = f.Write([]byte(file.Src)); err != nil {
-				gen.processError[templating] = err
-			}
-		} else {
-			gen.processError[templating] = err
-		}
+	if err := depl.Deploy(); err != nil {
+		gen.processError[deploying] = err
 	}
 
 	r.AddObject(*rObj)
@@ -95,7 +85,12 @@ func (gen *Generator) Generate(file string) error {
 
 	if gen.settings.AutoDelete {
 		for _, del := range r.Deleted {
-			_ = os.RemoveAll(del)
+			if err := os.RemoveAll(del); err != nil {
+				println("-------------------------------------")
+				println("             Removing error:")
+				println("             " + err.Error())
+				println("-------------------------------------")
+			}
 		}
 	}
 
@@ -114,4 +109,98 @@ func errorConverting(pErr processError) error {
 	}
 
 	return nil
+}
+
+func CopyFile(src, dst string) (err error) {
+	in, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if e := out.Close(); e != nil {
+			err = e
+		}
+	}()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return
+	}
+
+	err = out.Sync()
+	if err != nil {
+		return
+	}
+
+	si, err := os.Stat(src)
+	if err != nil {
+		return
+	}
+	err = os.Chmod(dst, si.Mode())
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func CopyDir(src string, dst string) (err error) {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
+
+	si, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if !si.IsDir() {
+		return fmt.Errorf("source is not a directory")
+	}
+
+	_, err = os.Stat(dst)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+	if err == nil {
+		return fmt.Errorf("destination already exists")
+	}
+
+	err = os.MkdirAll(dst, si.Mode())
+	if err != nil {
+		return
+	}
+
+	entries, err := ioutil.ReadDir(src)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			err = CopyDir(srcPath, dstPath)
+			if err != nil {
+				return
+			}
+		} else {
+			// Skip symlinks.
+			if entry.Mode()&os.ModeSymlink != 0 {
+				continue
+			}
+
+			err = CopyFile(srcPath, dstPath)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	return
 }

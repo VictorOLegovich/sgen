@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-func (template *Template) imports(Struct collection.Struct) (imports string) {
-	schema := template.collection.GetRootSchema(Struct.Name)
+func (t *Template) imports(Struct collection.Struct) (imports string) {
+	schema := t.collection.GetRootSchema(Struct.Name)
 
 	imported := make([]string, len(schema.Childes))
 
@@ -20,11 +20,12 @@ func (template *Template) imports(Struct collection.Struct) (imports string) {
 	}
 
 	imports += "import (\n"
-	imports += "\t. \"" + template.settings.DataIA + "\"\n"
+	imports += "\t. \"" + t.settings.DataIA + "\"\n"
+	imports += "\tqb \"" + t.settings.DatabaseIA + "/general/query_builder\"\n"
 
 	for _, child := range schema.Childes {
 		if !isImported(imported, child.StructName) {
-			imports += "\t\"" + template.settings.StorageIA + "/" + strings.ToLower(child.StructName) + "_storage\"\n"
+			imports += "\t\"" + t.settings.DatabaseIA + "/" + strings.ToLower(child.StructName) + "_storage\"\n"
 			imported = append(imported, child.StructName)
 		}
 	}
@@ -33,15 +34,15 @@ func (template *Template) imports(Struct collection.Struct) (imports string) {
 	return imports
 }
 
-func (template *Template) getByParentId(Struct collection.Struct) (withParent string) {
-	schema := template.collection.GetRootSchema(Struct.Name)
+func (t *Template) getByParentId(Struct collection.Struct) (withParent string) {
+	schema := t.collection.GetRootSchema(Struct.Name)
 
 	if len(schema.Parents) == 0 {
 		return ""
 	}
 
 	for _, parent := range schema.Parents {
-		for _, child := range template.collection.GetRootSchema(parent.StructName).Childes {
+		for _, child := range t.collection.GetRootSchema(parent.StructName).Childes {
 			if schema.Current == child.StructName {
 				withParent += "func (" + schema.Current + "Storage *" + schema.Current + "Storage) Get" + child.Name +
 					"By" + parent.StructName + "ID(" + parent.StructName + "Id int) (" + child.Name + " " +
@@ -55,13 +56,13 @@ func (template *Template) getByParentId(Struct collection.Struct) (withParent st
 	return withParent
 }
 
-func (template *Template) getWithChildes(Struct collection.Struct) string {
+func (t *Template) getWithChildes(Struct collection.Struct) string {
 	var storagesInit string
 	var storagesCallable string
 	var getting string
 	var adding string
 
-	schema := template.collection.GetRootSchema(Struct.Name)
+	schema := t.collection.GetRootSchema(Struct.Name)
 
 	if len(schema.Childes) == 0 {
 		return ""

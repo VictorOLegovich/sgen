@@ -2,8 +2,8 @@
   "path": {
     "project_dir": "C:\\Users\\Александра\\go\\src\\github.com\\victorolegovich\\sgen\\test_data",
     "data_dir": "C:\\Users\\Александра\\go\\src\\github.com\\victorolegovich\\sgen\\test_data",
-    "storage_dir": "C:\\Users\\Александра\\go\\src\\github.com\\victorolegovich\\sgen\\test_data\\storages"
+    "database_dir": "C:\\Users\\Александра\\go\\src\\github.com\\victorolegovich\\sgen\\test_data\\database"
   },
   "sql_driver": "PostgreSQL",
-  "auto_delete": false
+  "auto_delete": true
 }

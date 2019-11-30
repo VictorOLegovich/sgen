@@ -82,7 +82,7 @@ func (r *Register) Save() error {
 	if object, err := r.GetObject(r.changed); err == nil {
 		filePath, _ = filepath.Abs("../register/register/" + object.Package + "." + format)
 		for s, path := range object.Entistor {
-			src += s + ":" + path + "\n"
+			src += s + "#" + path + "\n"
 		}
 		if err = write(filePath, src); err != nil {
 			return err
@@ -142,7 +142,7 @@ func read(filePath string) map[string]string {
 	lines = strings.Split(string(src), "\n")
 
 	for _, line := range lines {
-		elements = strings.Split(line, ":")
+		elements = strings.Split(line, "#")
 		if len(elements) > 1 {
 			entistor[elements[0]] = elements[1]
 		}
