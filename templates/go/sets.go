@@ -2,6 +2,7 @@ package _go
 
 import (
 	"github.com/victorolegovich/sgen/collection"
+	"github.com/victorolegovich/sgen/types"
 	"strings"
 )
 
@@ -17,11 +18,15 @@ func (t *Template) sets(Struct collection.Struct) string {
 	sSet.WriteString("\nvar selectSet = []string{\n\t")
 
 	for _, field := range Struct.Fields {
-		content := []string{"\"", field.Name, "\","}
-		for _, c := range content {
-			iSet.WriteString(c)
-			uSet.WriteString(c)
-			sSet.WriteString(c)
+		if types.IsSimpleType(field.Type) {
+			content := []string{"\"", field.Name, "\","}
+			for _, c := range content {
+				fc := formatTheCamelCase(c)
+
+				iSet.WriteString(fc)
+				uSet.WriteString(fc)
+				sSet.WriteString(fc)
+			}
 		}
 	}
 

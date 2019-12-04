@@ -47,24 +47,24 @@ func (t *Template) mainTemplate(Struct collection.Struct) (temp string) {
 }
 
 //generation of storage structure
-func (*Template) storageType(strName string) string {
+func (t *Template) storageType(strName string) string {
 	return "type " + strName + "Storage struct {\n" +
-		"\tDataBase string\n" +
+		"\tdb " + t.libInsert.toType() + "\n" +
 		"\tqb *qb.QueryBuilder\n" +
 		"}\n\n"
 }
 
 //generation of the function of creating a new storage
 func (t *Template) newStorage(strName string) string {
-	decl := "func New" + strName + "Storage(DB string) *" + strName + "Storage"
+	decl := "func New" + strName + "Storage(db " + t.libInsert.toType() + ") *" + strName + "Storage"
 
-	s1, s2, s3 := "updateSet", "insertSet", "selectSet"
+	us, is, ss := "updateSet", "insertSet", "selectSet"
 	driver := "\"" + t.settings.SqlDriver + "\""
 
-	newQb := "queryBuilder := qb.NewQueryBuilder(\"" +
-		strName + "\", " + s1 + ", " + s2 + ", " + s3 + ", " + driver + ")"
+	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(strName) + "\", " + driver + ")\n\n"
+	initSets := "\t//you can opt out of using this action\n\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")"
 
-	return decl + "{\n\t" + newQb + "\n\treturn &" + strName + "Storage{DataBase: DB, qb: queryBuilder}\n}\n\n"
+	return decl + "{\n" + newQb + initSets + "\n\n\treturn &" + strName + "Storage{db: db, qb: qBuilder}\n}\n\n"
 }
 
 //package name generation

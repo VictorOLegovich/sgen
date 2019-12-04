@@ -1,20 +1,31 @@
 package query_builder
 
 import (
+	"os"
 	"strings"
 )
 
 type QueryBuilder struct {
 	Table, Driver    string
 	USet, ISet, SSet []string
+	setsInit         bool
 	*ph
 }
 
-func NewQueryBuilder(Table string, USet, ISet, SSet []string, Driver string) *QueryBuilder {
-	return &QueryBuilder{strings.ToLower(Table), Driver, USet, ISet, SSet, getPH(Driver)}
+func NewQueryBuilder(Table string, Driver string) *QueryBuilder {
+	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, ph: getPH(Driver)}
+}
+
+func (qb *QueryBuilder) InitSets(USet, ISet, SSet []string) {
+	qb.USet, qb.ISet, qb.SSet, qb.setsInit = USet, ISet, SSet, true
 }
 
 func (qb *QueryBuilder) Insert() *Insert {
+	if !qb.setsInit {
+		println("This operation can only be used if the field sets in the database are transferred")
+		os.Exit(1)
+	}
+
 	var sql strings.Builder
 
 	elems := []string{"Insert Into ", qb.Table, " (", parameters(qb.SSet), ") Values ("}
@@ -56,21 +67,13 @@ func (qb *QueryBuilder) Select(all bool) *Select {
 	return newSelect(qb.Table, qb.Driver, &sql, qb.ph)
 }
 
-func (qb *QueryBuilder) Update(field string) *Update {
+func (qb *QueryBuilder) Update() *Update {
 	var sql strings.Builder
 
-	elems := []string{"Update `", strings.ToLower(qb.Table), "` Set ", field, " = ", qb.ph.Next(), " "}
-
-	for _, elem := range elems {
-		sql.WriteString(elem)
+	if !qb.setsInit {
+		println("This operation can only be used if the field sets in the database are transferred")
+		os.Exit(1)
 	}
-
-	return newUpdate(&sql, qb.ph)
-
-}
-
-func (qb *QueryBuilder) UpdateSeveral() *Update {
-	var sql strings.Builder
 
 	elems := []string{
 		"Update `", strings.ToLower(qb.Table), "` Set"}

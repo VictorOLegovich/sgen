@@ -8,6 +8,7 @@ import (
 type Template struct {
 	collection collection.Collection
 	settings   settings.Settings
+	*libInsert
 }
 
 type File struct {
@@ -15,8 +16,11 @@ type File struct {
 }
 
 func NewTemplate(Collection collection.Collection, s settings.Settings) *Template {
+	libInsert := newLibInsert(s.SqlDriver)
+
 	return &Template{
 		collection: Collection,
 		settings:   s,
+		libInsert:  libInsert,
 	}
 }

@@ -15,69 +15,126 @@ func (t *Template) crud(Struct collection.Struct) (crud string) {
 type crudList []func(Struct collection.Struct) string
 
 func (t *Template) getCrudList() crudList {
-	return crudList{
-		t.c,
-		t.r,
-		t.u,
-		t.d,
-	}
+	return crudList{t.c, t.r, t.u, t.d}
 }
 
 func (t *Template) c(Struct collection.Struct) string {
+	if hasNestedStructs(Struct) {
+		return t.optionalInsert(Struct)
+	}
+
 	decl := "func (s *" + Struct.Name + "Storage) " + "Create(" + strings.ToLower(Struct.Name) + " " + Struct.Name + ") error"
-	query := "query := s.qb.Insert()"
-	body := "{\n\t" + query + "\n\tprintln(query)\n\treturn nil\n}\n\n"
+	query := "query := s.qb.Insert().SQLString()"
+
+	dbCall := t.libInsert.toExec(scanningPreparation(
+		strings.ToLower(Struct.Name),
+		Struct.Fields,
+		true,
+		false,
+		1),
+	)
+
+	body := "{\n\t" + query + "\n\n" + dbCall + "\n}\n\n"
+
+	return decl + body
+}
+
+func (t *Template) u(Struct collection.Struct) string {
+	//Update one field
+	decl := "func (s *" + Struct.Name + "Storage) Update(" +
+		strings.ToLower(Struct.Name) + " " + Struct.Name + ") error"
+
+	query := "query := s.qb.Update().Where(\"ID\", \"=\").SQLString()"
+
+	dbCall := t.libInsert.toExec(scanningPreparation(
+		strings.ToLower(Struct.Name),
+		Struct.Fields,
+		true,
+		false,
+		1),
+	)
+
+	body := "{\n\t" + query + "\n\n" + dbCall + "\n}\n\n"
+
+	return decl + body
+}
+
+func (t *Template) d(Struct collection.Struct) string {
+	decl := "func (s *" + Struct.Name + "Storage) Delete(ID int) error"
+
+	query := `query := s.qb.Delete().Where("ID","=").SQLString()`
+
+	dbCall := t.libInsert.toExec("ID")
+
+	body := "{\n\t" + query + "\n\n" + dbCall + "\n}\n\n"
 
 	return decl + body
 }
 
 func (t *Template) r(Struct collection.Struct) string {
-	//ReadOne
-	declROne := "func (s *" + Struct.Name + "Storage) ReadOne(ID int) (" + Struct.Name + ", error)"
-	queryROne := `query := s.qb.Select(false).Where("ID","=")`
-	bodyROne := "{\n\t" + queryROne + "\n\tprintln(query)\n\treturn " + Struct.Name + "{}, nil\n}\n\n"
-	ReadOne := declROne + bodyROne
+	return t.readOne(Struct) + t.readAll(Struct)
+}
 
-	//ReadAll
+func (t *Template) readOne(Struct collection.Struct) string {
+	//function declaration
+	declROne := "func (s *" + Struct.Name + "Storage) ReadOne(ID int) (*" + Struct.Name + ", error)"
+
+	//variable definition
+	variableROne := shortSyntaxOfCamelcase(Struct.Name)
+	variableROneDecl := variableROne + " := &" + Struct.Name + "{}"
+
+	dbCallROne := t.libInsert.toReadOne(
+		"ID",
+		scanningPreparation(
+			variableROne,
+			Struct.Fields,
+			true,
+			true,
+			1,
+		),
+	)
+
+	//query definition
+	queryROne := `query := s.qb.Select(false).Where("ID","=").Limit(1).SQLString()`
+
+	//body shaping
+	bodyROne := "{\n\t" + variableROneDecl + "\n\n\t" +
+		queryROne + "\n\n\t" + dbCallROne + "\n\n\treturn " + variableROne + ", err\n}\n\n"
+
+	return declROne + bodyROne
+}
+
+func (t *Template) readAll(Struct collection.Struct) string {
+	//function declaration
 	declRAll := "func (s *" + Struct.Name + "Storage) ReadList() ([]" + Struct.Name + ", error)"
-	queryRAll := `query := s.qb.Select(false)`
-	bodyRAll := "{\n\t" + queryRAll + "\n\tprintln(query)\n\treturn []" + Struct.Name + "{}, nil\n}\n\n"
-	ReadAll := declRAll + bodyRAll
 
-	return ReadOne + ReadAll
-}
+	//variable definition
+	variableRAll := shortSyntaxOfCamelcase(Struct.Name) + "List"
+	variableRAllDecl := "var " + variableRAll + " []" + Struct.Name
 
-func (t *Template) u(Struct collection.Struct) string {
-	//Update one field
-	declUOne := "func (s *" + Struct.Name + "Storage) Update(field, value string) error"
-	queryUOne := "query := s.qb.Update(field).Where(\"ID\", \"=\")"
-	bodyUOne := "{\n\t" + queryUOne + "\n\tprintln(query)\n\treturn nil \n}\n\n"
+	variableROne := shortSyntaxOfCamelcase(Struct.Name)
+	variableROneDecl := variableROne + " := " + Struct.Name + "{}"
 
-	//Update a few fields
-	declUSeveral := "func (s *" + Struct.Name + "Storage) UpdateSeveral(" +
-		strings.ToLower(Struct.Name) + " " + Struct.Name + ") error"
-	queryUSeveral := "query := s.qb.UpdateSeveral().Where(\"ID\",\"=\")"
-	bodyUSeveral := "{\n\t" + queryUSeveral + "\n\tprintln(query)\n\treturn nil \n}\n\n"
+	dbCallRAll := t.libInsert.toReadAll(
+		variableROne, variableRAll,
+		scanningPreparation(
+			variableROne,
+			Struct.Fields,
+			true,
+			true,
+			2),
+	)
 
-	return declUOne + bodyUOne + declUSeveral + bodyUSeveral
-}
+	//query definition
+	queryRAll := `query := s.qb.Select(false).Limit(10)`
 
-func (t *Template) d(Struct collection.Struct) string {
-	decl := "func (s *" + Struct.Name + "Storage) Delete(ID int) error"
-	query := `query := s.qb.Delete().Where("ID","=")`
-	body := "{\n\t" + query + "\n\tprintln(query)\n\treturn nil\n}\n\n"
+	//body shaping
+	bodyRAll := "{\n" +
+		"\t" + variableRAllDecl + "\n" +
+		"\t" + variableROneDecl + "\n\n" +
+		"\t" + queryRAll + "\n\n" +
+		"\t" + dbCallRAll + "\n\n" +
+		"\treturn " + variableRAll + ", nil\n}\n\n"
 
-	return decl + body
-}
-
-func (t *Template) parameters(fields []collection.Field) (parameters string) {
-	for key, field := range fields {
-		if key < len(fields) {
-			parameters += field.Name + " " + field.Type + ", "
-		} else {
-			parameters += field.Name + " " + field.Type
-		}
-
-	}
-	return parameters
+	return declRAll + bodyRAll
 }

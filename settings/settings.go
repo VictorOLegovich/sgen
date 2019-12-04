@@ -20,8 +20,8 @@ const SettingsSRC = `{
 }`
 
 const (
-	MySQL      = "MySQL"
-	PostgreSQL = "PostgreSQL"
+	MySQL      = "mysql"
+	PostgreSQL = "postgresql"
 )
 
 type Settings struct {
@@ -56,6 +56,8 @@ func New(file string) (s Settings, e error) {
 	if e = s.aliasingImports(); e != nil {
 		return s, e
 	}
+
+	s.SqlDriver = strings.ToLower(s.SqlDriver)
 
 	return s, e
 }
