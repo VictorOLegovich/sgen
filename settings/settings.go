@@ -72,7 +72,7 @@ func gopath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(gopath), nil
+	return string(gopath[:len(gopath)-1]), nil
 }
 
 func (settings *Settings) aliasingImports() error {
