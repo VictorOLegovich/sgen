@@ -78,7 +78,7 @@ func (fm *FileManager) moveModules() error {
 }
 
 func (fm *FileManager) moveQB() error {
-	srcDir, _ := filepath.Abs("../templates/sql/query_builder")
+	srcDir, _ := filepath.Abs(fm.settings.GOPATH + "/bin/templates/sql/query_builder")
 
 	dstDir, _ := filepath.Abs(filepath.Join(fm.settings.DatabaseDir, "general", "query_builder"))
 	if _, err := os.Stat(dstDir); os.IsExist(err) {
@@ -89,14 +89,13 @@ func (fm *FileManager) moveQB() error {
 }
 
 func (fm *FileManager) moveDB() error {
+	dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
 	switch fm.settings.SqlDriver {
 	case settings.MySQL:
-		dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
-		src, _ := filepath.Abs("../templates/go/general/mysql.txt")
+		src, _ := filepath.Abs(fm.settings.GOPATH + "/bin/templates/go/general/mysql.txt")
 		return CopyFile(src, dst)
 	case settings.PostgreSQL:
-		dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
-		src, _ := filepath.Abs("../templates/go/general/postgresql.txt")
+		src, _ := filepath.Abs(fm.settings.GOPATH + "/bin/templates/go/general/postgresql.txt")
 		return CopyFile(src, dst)
 	}
 
