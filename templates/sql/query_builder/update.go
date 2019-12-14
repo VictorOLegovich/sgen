@@ -1,5 +1,7 @@
 package query_builder
 
+const UPDATE string = `package query_builder
+
 import (
 	"strings"
 )
@@ -33,3 +35,4 @@ func (u *Update) Custom(sql string) *Update {
 func (u *Update) SQLString() string {
 	return u.sql.String()
 }
+`

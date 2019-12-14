@@ -1,5 +1,7 @@
 package query_builder
 
+const SELECT string = `package query_builder
+
 import (
 	"errors"
 	"os"
@@ -229,3 +231,4 @@ func (j Join) string() string {
 func (s sop) string() string {
 	return sopString[s]
 }
+`

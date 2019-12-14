@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/victorolegovich/sgen/settings"
 	_go "github.com/victorolegovich/sgen/templates/go"
+	"github.com/victorolegovich/sgen/templates/go/general"
+	"github.com/victorolegovich/sgen/templates/sql/query_builder"
 	"io"
 	"io/ioutil"
 	"os"
@@ -48,18 +50,15 @@ func (fm *FileManager) Deploy() error {
 
 func (fm *FileManager) createBaseDirectories() error {
 	general, _ := filepath.Abs(fm.settings.DatabaseDir + "/general")
-	if err := os.Mkdir(general, os.ModePerm); err != nil && os.IsNotExist(err) {
-		return err
-	}
-
 	storages, _ := filepath.Abs(fm.settings.DatabaseDir + "/storages")
-	if err := os.Mkdir(storages, os.ModePerm); err != nil && os.IsNotExist(err) {
-		return err
-	}
-
 	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db")
-	if err := os.Mkdir(database, os.ModePerm); err != nil && os.IsNotExist(err) {
-		return err
+	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/query_builder")
+
+	dirs := []string{general, storages, database, queryBuilder}
+	for _, dir := range dirs {
+		if err := os.Mkdir(dir, os.ModePerm); err != nil && os.IsNotExist(err) {
+			return err
+		}
 	}
 
 	return nil
@@ -78,28 +77,33 @@ func (fm *FileManager) moveModules() error {
 }
 
 func (fm *FileManager) moveQB() error {
-	srcDir, _ := filepath.Abs(filepath.Join(fm.settings.GOPATH + "/bin/templates/sql/query_builder"))
+	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/query_builder")
 
-	dstDir, _ := filepath.Abs(filepath.Join(fm.settings.DatabaseDir, "general", "query_builder"))
-	if _, err := os.Stat(dstDir); os.IsExist(err) {
-		return nil
+	for _, file := range query_builder.Files() {
+		f, err := os.Create(filepath.Join(queryBuilder, file.Name))
+		if err != nil {
+			return err
+		}
+
+		if _, err = f.WriteString(file.Src); err != nil {
+			return err
+		}
 	}
 
-	return CopyDir(srcDir, dstDir)
+	return nil
 }
 
 func (fm *FileManager) moveDB() error {
 	dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
-	switch fm.settings.SqlDriver {
-	case settings.MySQL:
-		src, _ := filepath.Abs(fm.settings.GOPATH + "/bin/templates/go/general/mysql.txt")
-		return CopyFile(src, dst)
-	case settings.PostgreSQL:
-		src, _ := filepath.Abs(fm.settings.GOPATH + "/bin/templates/go/general/postgresql.txt")
-		return CopyFile(src, dst)
+
+	file, err := os.Create(dst)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	_, err = file.WriteString(general.Src(fm.settings.SqlDriver))
+
+	return err
 }
 
 func (fm *FileManager) createFiles() error {

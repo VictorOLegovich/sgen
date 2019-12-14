@@ -1,5 +1,7 @@
 package query_builder
 
+const INSERT string = `package query_builder
+
 import (
 	"strings"
 )
@@ -21,3 +23,4 @@ func (i *Insert) Custom(sql string) *Insert {
 func (i *Insert) SQLString() string {
 	return i.sql.String()
 }
+`

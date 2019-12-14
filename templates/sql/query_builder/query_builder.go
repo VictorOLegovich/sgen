@@ -1,5 +1,7 @@
 package query_builder
 
+const QueryBuilder string = `package query_builder
+
 import (
 	"os"
 	"strings"
@@ -105,3 +107,4 @@ func (qb *QueryBuilder) Delete() *Delete {
 
 	return newDelete(&sql, qb.ph)
 }
+`

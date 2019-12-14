@@ -1,5 +1,7 @@
 package query_builder
 
+const UTILS string = `package query_builder
+
 import (
 	"github.com/victorolegovich/sgen/settings"
 	"os"
@@ -81,3 +83,4 @@ func getPH(driver string) *ph {
 		return ph
 	}
 }
+`

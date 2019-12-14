@@ -1,5 +1,7 @@
 package query_builder
 
+const DELETE string = `package query_builder
+
 import (
 	"strings"
 )
@@ -33,3 +35,4 @@ func (d *Delete) Custom(sql string) *Delete {
 func (d *Delete) SQLString() string {
 	return d.sql.String()
 }
+`

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -16,7 +15,7 @@ const SRC = `{
     "data_dir": "",
     "database_dir": ""
   },
-  "sql_driver": "",
+  "sql_driver": ""
 }`
 
 const (
@@ -28,7 +27,6 @@ type (
 	Settings struct {
 		Path `json:"path"`
 		ImportAliases
-		GOPATH    string
 		SqlDriver string `json:"sql_driver"`
 	}
 	Path struct {
@@ -58,21 +56,7 @@ func New(file string) (s Settings, e error) {
 	}
 
 	s.SqlDriver = strings.ToLower(s.SqlDriver)
-	gopath, err := gopath()
-	if err != nil {
-		return Settings{}, err
-	}
-	s.GOPATH = gopath
-
 	return s, e
-}
-
-func gopath() (string, error) {
-	gopath, err := exec.Command("go", "env", "GOPATH").Output()
-	if err != nil {
-		return "", err
-	}
-	return string(gopath[:len(gopath)-1]), nil
 }
 
 func (settings *Settings) aliasingImports() error {
