@@ -21,16 +21,15 @@ func NewConnection() (*sqlx.DB, error) {
 	postgres string = `package db
 
 import (
+	"context"
 	"github.com/jackc/pgx"
 )
 
 //Fill in the configuration
-func config() (c pgx.ConnConfig) {
-	return c
-}
+const connection string = ""
 
 func NewConnection() (*pgx.Conn, error) {
-	conn, err := pgx.Connect(config())
+	conn, err := pgx.Connect(context.Background(), connection)
 	if err != nil {
 		return nil, err
 	}

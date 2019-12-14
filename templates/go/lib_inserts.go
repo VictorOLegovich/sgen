@@ -36,16 +36,27 @@ func (l *libInsert) toType() string {
 }
 
 func (l *libInsert) toReadOne(value, scanning string, lineBreak bool) string {
-	pgxROne := "err = s.db.QueryRow(\n\t\tquery," + value + ").Scan("
+	pgx := "err = s.db.QueryRow(context.Background(), query," + value + ").Scan("
+	sqlx := "err = s.db.QueryRow( query," + value + ").Scan("
 	if lineBreak {
-		return pgxROne + "\n" + scanning + "\t)"
+		pgx += "\n" + scanning + "\t)"
+		sqlx += "\n" + scanning + "\t)"
 	} else {
-		return pgxROne + scanning + ")"
+		pgx += scanning + ")"
+		sqlx += scanning + ")"
 	}
+
+	switch l.driver {
+	case settings.MySQL:
+		return sqlx
+	case settings.PostgreSQL:
+		return pgx
+	}
+	return ""
 }
 
 func (l *libInsert) toReadAll(fillingVar, addVar, scanning string, lineBreak bool) string {
-	pgxRow := "rows, err := s.db.Query(query)\n\n" +
+	pgxRow := "rows, err := s.db.Query(context.Background(), query)\n\n" +
 		"\tif err != nil{\n" +
 		"\t\treturn nil, err\n" +
 		"\t}\n\n" +
@@ -57,15 +68,44 @@ func (l *libInsert) toReadAll(fillingVar, addVar, scanning string, lineBreak boo
 	pgxRow += scanning + "\t\t); err != nil{\n\t\t\treturn nil, err\n\t\t}\n\n" +
 		"\t\t" + addVar + " = append(" + addVar + "," + fillingVar + ")\n\t}"
 
-	return pgxRow
+	sqlxRow := "rows, err := s.db.Query(context.Background(), query)\n\n" +
+		"\tif err != nil{\n" +
+		"\t\treturn nil, err\n" +
+		"\t}\n\n" +
+		"\tfor rows.Next(){\n" +
+		"\t\tif err := rows.Scan("
+	if lineBreak {
+		sqlxRow += "\n"
+	}
+	sqlxRow += scanning + "\t\t); err != nil{\n\t\t\treturn nil, err\n\t\t}\n\n" +
+		"\t\t" + addVar + " = append(" + addVar + "," + fillingVar + ")\n\t}"
+
+	switch l.driver {
+	case settings.PostgreSQL:
+		return pgxRow
+	case settings.MySQL:
+		return sqlxRow
+	}
+
+	return ""
 }
 
 func (l *libInsert) toExec(args string, lineBreak bool) string {
-	exec := "\t_, err = s.db.Exec("
+	pgx := "\t_, err = s.db.Exec(context.Background(),"
+	sqlx := "\t_, err = s.db.Exec("
 	if lineBreak {
-		exec += "\n\t\tquery," + args + "\t)\n"
+		pgx += "\n\t\tquery," + args + "\t)\n"
+		sqlx += "\n\t\tquery," + args + "\t)\n"
 	} else {
-		exec += "query, " + args + ")\n"
+		pgx += "query, " + args + ")\n"
+		sqlx += "query, " + args + ")\n"
 	}
-	return exec
+
+	switch l.driver {
+	case settings.PostgreSQL:
+		return pgx
+	case settings.MySQL:
+		return sqlx
+	}
+	return ""
 }
