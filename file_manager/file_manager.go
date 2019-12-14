@@ -1,24 +1,33 @@
 package file_manager
 
 import (
+	"errors"
 	"fmt"
-	"github.com/victorolegovich/sgen/register"
 	"github.com/victorolegovich/sgen/settings"
 	_go "github.com/victorolegovich/sgen/templates/go"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+type Scope int
+
+const (
+	File Scope = iota
+	Decl
 )
 
 type FileManager struct {
 	settings settings.Settings
 	files    []_go.File
-	ro       *register.RegObject
 }
 
-func NewFileManger(settings settings.Settings, files []_go.File, ro *register.RegObject) *FileManager {
-	return &FileManager{settings, files, ro}
+func NewFileManger(settings settings.Settings, files []_go.File) *FileManager {
+	return &FileManager{settings, files}
 }
 
 func (fm *FileManager) Deploy() error {
@@ -26,7 +35,7 @@ func (fm *FileManager) Deploy() error {
 		return err
 	}
 
-	if err := fm.moveTheAuxiliaryModules(); err != nil {
+	if err := fm.moveModules(); err != nil {
 		return err
 	}
 
@@ -48,11 +57,20 @@ func (fm *FileManager) createBaseDirectories() error {
 		return err
 	}
 
+	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db")
+	if err := os.Mkdir(database, os.ModePerm); err != nil && os.IsNotExist(err) {
+		return err
+	}
+
 	return nil
 }
 
-func (fm *FileManager) moveTheAuxiliaryModules() error {
+func (fm *FileManager) moveModules() error {
 	if err := fm.moveQB(); err != nil {
+		return err
+	}
+
+	if err := fm.moveDB(); err != nil {
 		return err
 	}
 
@@ -64,11 +82,25 @@ func (fm *FileManager) moveQB() error {
 
 	dstDir, _ := filepath.Abs(filepath.Join(fm.settings.DatabaseDir, "general", "query_builder"))
 	if _, err := os.Stat(dstDir); os.IsExist(err) {
-		println("Уже есть qb")
 		return nil
 	}
 
 	return CopyDir(srcDir, dstDir)
+}
+
+func (fm *FileManager) moveDB() error {
+	switch fm.settings.SqlDriver {
+	case settings.MySQL:
+		dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
+		src, _ := filepath.Abs("../templates/go/general/mysql.txt")
+		return CopyFile(src, dst)
+	case settings.PostgreSQL:
+		dst, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db/db.go")
+		src, _ := filepath.Abs("../templates/go/general/postgresql.txt")
+		return CopyFile(src, dst)
+	}
+
+	return nil
 }
 
 func (fm *FileManager) createFiles() error {
@@ -80,11 +112,15 @@ func (fm *FileManager) createFiles() error {
 		}
 
 		if f, err := os.Create(filepath.Join(file.Path, file.Name)); err == nil {
-			fm.ro.Entistor[file.Owner] = file.Path
-
 			if _, err = f.Write([]byte(file.Src)); err != nil {
 				return err
 			}
+
+			cmd := exec.Command("go", "fmt", file.Path)
+			if err := cmd.Run(); err != nil {
+				print("Fmt can't be called")
+			}
+
 		} else {
 			return err
 		}
@@ -184,6 +220,108 @@ func CopyDir(src string, dst string) (err error) {
 	return
 }
 
-func Delete(del string) error {
+func DeleteDir(del string) error {
 	return os.RemoveAll(del)
+}
+
+func AddToFile(filename, exp, needle string, scope Scope) error {
+	var (
+		data    []string
+		builder strings.Builder
+		ex      = regexp.MustCompile(exp)
+	)
+
+	data = strings.Split(read(filename), "\n")
+
+	if scope != File {
+
+		positions := positions(data, ex)
+
+		if len(positions) == 0 {
+			return errors.New("No space was found in this file ")
+		}
+
+		for i, s := range data {
+			if i > 0 {
+				builder.WriteString("\n")
+			}
+			if hasPos(positions, i) {
+				builder.WriteString(needle + "\n")
+			}
+
+			builder.WriteString(s)
+
+		}
+
+		write(filename, builder.String())
+		return format(filename)
+	}
+
+	for k, s := range data {
+		if k > 0 {
+			builder.WriteString("\n")
+		}
+
+		if ex.MatchString(s) {
+			builder.WriteString(needle)
+		}
+
+		builder.WriteString(s)
+	}
+
+	write(filename, builder.String())
+	return format(filename)
+}
+
+func hasPos(positions []int, current int) bool {
+	for _, position := range positions {
+		if current == position {
+			return true
+		}
+	}
+
+	return false
+}
+
+func positions(data []string, exp *regexp.Regexp) (positions []int) {
+	for i, s := range data {
+		if exp.MatchString(s) {
+			positions = append(positions, i+1)
+		}
+	}
+
+	return positions
+}
+
+func read(filename string) string {
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	info, _ := file.Stat()
+	data := make([]byte, info.Size())
+
+	for {
+		_, err := file.Read(data)
+
+		if err == io.EOF {
+			break
+		}
+	}
+	_ = file.Close()
+
+	return string(data)
+}
+
+func write(filename, content string) {
+	file, _ := os.OpenFile(filename, os.O_WRONLY, os.ModeAppend)
+	_, _ = file.WriteString(content)
+
+	_ = file.Close()
+}
+
+func format(file string) error {
+	cmd := exec.Command("go", "fmt", file)
+	return cmd.Run()
 }

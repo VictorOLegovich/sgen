@@ -61,8 +61,8 @@ func (t *Template) newStorage(strName string) string {
 	us, is, ss := "updateSet", "insertSet", "selectSet"
 	driver := "\"" + t.settings.SqlDriver + "\""
 
-	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(strName) + "\", " + driver + ")\n\n"
-	initSets := "\t//you can opt out of using this action\n\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")"
+	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(strName) + "\", " + driver + ")\n"
+	initSets := "\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")"
 
 	return decl + "{\n" + newQb + initSets + "\n\n\treturn &" + strName + "Storage{db: db, qb: qBuilder}\n}\n\n"
 }

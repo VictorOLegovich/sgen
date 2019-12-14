@@ -5,18 +5,18 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-const SettingsSRC = `{
+const SRC = `{
   "path": {
     "project_dir": "",
     "data_dir": "",
-    "storage_dir": ""
+    "database_dir": ""
   },
   "sql_driver": "",
-  "auto_delete": false
 }`
 
 const (
@@ -24,24 +24,24 @@ const (
 	PostgreSQL = "postgresql"
 )
 
-type Settings struct {
-	Path `json:"path"`
-	ImportAliases
-	SqlDriver  string `json:"sql_driver"`
-	AutoDelete bool   `json:"auto_delete"`
-}
-
-type Path struct {
-	ProjectDir  string `json:"project_dir"`
-	DataDir     string `json:"data_dir"`
-	DatabaseDir string `json:"database_dir"`
-}
-
-type ImportAliases struct {
-	DataIA     string
-	DatabaseIA string
-	ProjectIA  string
-}
+type (
+	Settings struct {
+		Path `json:"path"`
+		ImportAliases
+		GOPATH    string
+		SqlDriver string `json:"sql_driver"`
+	}
+	Path struct {
+		ProjectDir  string `json:"project_dir"`
+		DataDir     string `json:"data_dir"`
+		DatabaseDir string `json:"database_dir"`
+	}
+	ImportAliases struct {
+		DataIA     string
+		DatabaseIA string
+		ProjectIA  string
+	}
+)
 
 func New(file string) (s Settings, e error) {
 	src, e := ioutil.ReadFile(file)
@@ -58,8 +58,21 @@ func New(file string) (s Settings, e error) {
 	}
 
 	s.SqlDriver = strings.ToLower(s.SqlDriver)
+	gopath, err := gopath()
+	if err != nil {
+		return Settings{}, err
+	}
+	s.GOPATH = gopath
 
 	return s, e
+}
+
+func gopath() (string, error) {
+	gopath, err := exec.Command("go", "env", "GOPATH").Output()
+	if err != nil {
+		return "", err
+	}
+	return string(gopath), nil
 }
 
 func (settings *Settings) aliasingImports() error {

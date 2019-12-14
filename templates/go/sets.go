@@ -22,7 +22,10 @@ func (t *Template) sets(Struct collection.Struct) string {
 			content := []string{"\"", field.Name, "\","}
 			for _, c := range content {
 				fc := formatTheCamelCase(c)
-
+				if field.Name == "ID" {
+					sSet.WriteString(fc)
+					continue
+				}
 				iSet.WriteString(fc)
 				uSet.WriteString(fc)
 				sSet.WriteString(fc)

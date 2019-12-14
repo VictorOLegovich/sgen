@@ -48,7 +48,7 @@ func Run() error {
 					return err
 				}
 
-				_, err = file.WriteString(settings.SettingsSRC)
+				_, err = file.WriteString(settings.SRC)
 				return err
 			},
 		},

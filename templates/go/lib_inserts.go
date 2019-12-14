@@ -12,7 +12,6 @@ func newLibInsert(driver string) *libInsert {
 	return &libInsert{driver}
 }
 
-//Insertion in the import section
 func (l *libInsert) toImport() string {
 	switch l.driver {
 	case settings.MySQL:
@@ -36,41 +35,37 @@ func (l *libInsert) toType() string {
 	}
 }
 
-func (l *libInsert) toReadOne(value, scanning string) string {
-	switch l.driver {
-	case settings.PostgreSQL:
-		return "err := s.db.QueryRow(\n\t\tcontext.Background(),query," + value + ").Scan(\n" + scanning + "\t)"
-	default:
-		return ""
+func (l *libInsert) toReadOne(value, scanning string, lineBreak bool) string {
+	pgxROne := "err = s.db.QueryRow(\n\t\tquery," + value + ").Scan("
+	if lineBreak {
+		return pgxROne + "\n" + scanning + "\t)"
+	} else {
+		return pgxROne + scanning + ")"
 	}
 }
 
-func (l *libInsert) toReadAll(fillingVar, addVar, scanning string) string {
-	pgxRow := "rows, err := s.db.Query(context.Background(),query.SQLString())\n\n" +
+func (l *libInsert) toReadAll(fillingVar, addVar, scanning string, lineBreak bool) string {
+	pgxRow := "rows, err := s.db.Query(query)\n\n" +
 		"\tif err != nil{\n" +
 		"\t\treturn nil, err\n" +
 		"\t}\n\n" +
 		"\tfor rows.Next(){\n" +
-		"\t\terr := rows.Scan(\n" + scanning + "\t\t)\n\n" +
-		"\t\tif err != nil{\n\t\t\treturn nil, err\n\t\t}\n\n" +
+		"\t\tif err := rows.Scan("
+	if lineBreak {
+		pgxRow += "\n"
+	}
+	pgxRow += scanning + "\t\t); err != nil{\n\t\t\treturn nil, err\n\t\t}\n\n" +
 		"\t\t" + addVar + " = append(" + addVar + "," + fillingVar + ")\n\t}"
 
-	switch l.driver {
-	case settings.PostgreSQL:
-		return pgxRow
-	default:
-		return ""
-	}
+	return pgxRow
 }
 
-func (l *libInsert) toExec(args string) string {
-	pgxExec := "\t_, err := s.db.Exec(\n\t\tcontext.Background(), query,\n" + args + "\t)\n\n" +
-		"\treturn err"
-
-	switch l.driver {
-	case settings.PostgreSQL:
-		return pgxExec
-	default:
-		return ""
+func (l *libInsert) toExec(args string, lineBreak bool) string {
+	exec := "\t_, err = s.db.Exec("
+	if lineBreak {
+		exec += "\n\t\tquery," + args + "\t)\n"
+	} else {
+		exec += "query, " + args + ")\n"
 	}
+	return exec
 }

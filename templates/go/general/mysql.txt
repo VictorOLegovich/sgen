@@ -1,0 +1,15 @@
+package db
+
+import (
+	"github.com/jmoiron/sqlx"
+)
+
+const connection = ""
+
+func NewConnection() (*sqlx.DB, error) {
+	db, err := sqlx.Connect("mysql", connection)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}

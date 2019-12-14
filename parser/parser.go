@@ -2,14 +2,12 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	c "github.com/victorolegovich/sgen/collection"
+	fm "github.com/victorolegovich/sgen/file_manager"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -43,6 +41,7 @@ func Parse(dir string, collection *c.Collection) error {
 	if errText != "" {
 		return errors.New(errText)
 	}
+
 	return nil
 }
 
@@ -53,23 +52,28 @@ func parse(filename string, collection *c.Collection) error {
 		return err
 	}
 
+	inspecting(file, collection)
+
 	//_ = ast.Print(fset, file)
 
-	//если нет поля ID, добавляем его в файл
-	if pos := inspecting(file, collection); pos != 0 {
-		addToFile(filename, pos)
+	for i, s := range collection.Structs {
+		if err := completeFile(filename, i, s, collection); err != nil {
+			return err
+		}
 	}
-
-	collection.CompletingRootSchemas()
 
 	return nil
 }
 
-func inspecting(file *ast.File, collection *c.Collection) (pos int) {
+func inspecting(file *ast.File, collection *c.Collection) {
+	var parents = map[string][]string{}
 
 	ast.Inspect(file, func(node ast.Node) bool {
-		var Struct c.Struct
-		var RootSchema c.RootSchema
+		var (
+			Struct     c.Struct
+			RootSchema c.RootSchema
+			isParent   bool
+		)
 
 		switch n := node.(type) {
 		case *ast.File:
@@ -79,25 +83,34 @@ func inspecting(file *ast.File, collection *c.Collection) (pos int) {
 			switch s := n.Type.(type) {
 
 			case *ast.StructType:
-				if !hasID(s.Fields) {
-					pos = int(s.Struct)
+				Struct.Name = n.Name.Name
+				Struct.Fields, RootSchema.Childes, Struct.Complicated, isParent = fields(s)
+
+				if isParent {
+					for _, child := range RootSchema.Childes {
+						parents[child.StructName] = append(parents[child.StructName], n.Name.Name)
+					}
 				}
 
-				Struct.Name, RootSchema.Current = n.Name.Name, n.Name.Name
-				Struct.Fields, RootSchema.Childes, Struct.Complicated = fillFlds(s)
+				Struct.RootSchema = RootSchema
 
 				collection.Structs = append(collection.Structs, Struct)
-				collection.RootSchemas = append(collection.RootSchemas, RootSchema)
 			}
 		}
 
 		return true
 	})
-	return pos
+
+	for i, s := range collection.Structs {
+		for child, parentList := range parents {
+			if s.Name == child {
+				collection.Structs[i].Parents = parentList
+			}
+		}
+	}
 }
 
-//fields filling
-func fillFlds(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Complicated map[string]c.Complicated) {
+func fields(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Complicated map[string]c.Complicated, parent bool) {
 	var Field = c.Field{}
 	var Child = c.RootObject{}
 
@@ -105,13 +118,14 @@ func fillFlds(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Comp
 
 	for _, field := range s.Fields.List {
 		if len(field.Names) == 0 {
-
 			switch ftype := field.Type.(type) {
 
 			case *ast.Ident:
 				Child.StructName, Child.Type, Child.Name = ftype.Name, ftype.Name, ftype.Name
 				Childes = append(Childes, Child)
 				Field.Name, Field.Type = ftype.Name, ftype.Name
+				parent = true
+				Fields = append(Fields, Field)
 			}
 		}
 
@@ -125,14 +139,16 @@ func fillFlds(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Comp
 			}
 			if child.StructName != "" {
 				child.Field = Field
+				parent = true
 				Childes = append(Childes, child)
 			}
+
+			Fields = append(Fields, Field)
 		}
 
-		Fields = append(Fields, Field)
 	}
 
-	return Fields, Childes, Complicated
+	return Fields, Childes, Complicated, parent
 }
 
 func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicated, child c.RootObject) {
@@ -151,6 +167,7 @@ func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicate
 			case *ast.TypeSpec:
 				switch decl.Type.(type) {
 				case *ast.StructType:
+					println(decl.Name)
 					Field.Type = decl.Name.Name
 					child.StructName = decl.Name.Name
 				}
@@ -259,40 +276,64 @@ func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicate
 	return complicated, child
 }
 
-func hasID(fields *ast.FieldList) bool {
-	for _, field := range fields.List {
-		for _, ident := range field.Names {
-			if ident.Name == "ID" {
-				return true
-			}
+func completeFile(filename string, i int, s c.Struct, collection *c.Collection) error {
+	var needle, exp string
+
+	exp = "(type " + s.Name + " struct[ {])"
+
+	pos := 0
+
+	for _, field := range checkFields(s) {
+		if field.Name != "ID" {
+			pos++
+		}
+		needle += "\t" + field.Name + " " + field.Type + "\n"
+
+		addField(collection, field, i, pos)
+	}
+
+	if needle != "" {
+		err := fm.AddToFile(filename, exp, needle, fm.Decl)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkFields(s c.Struct) (fields []c.Field) {
+	idField := c.Field{Name: "ID", Type: "int"}
+	if !hasField(s.Fields, idField) {
+		fields = append(fields, idField)
+	}
+
+	for _, parent := range s.Parents {
+		parentId := c.Field{Name: parent + "ID", Type: "int"}
+
+		if !hasField(s.Fields, parentId) {
+			fields = append(fields, parentId)
+		}
+	}
+
+	return fields
+}
+
+func hasField(fields []c.Field, field c.Field) bool {
+	for _, f := range fields {
+		if f.Name == field.Name && f.Type == field.Type {
+			return true
 		}
 	}
 	return false
 }
 
-func addToFile(filename string, pos int) {
-	file, err := os.Open(filename)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	info, _ := file.Stat()
-	data := make([]byte, info.Size())
+func addField(collection *c.Collection, field c.Field, index, pos int) {
+	f := collection.Structs[index].Fields
 
-	for {
-		_, err := file.Read(data)
+	fields := f[:pos]
+	fields = append(fields, field)
+	fields = append(fields, f[pos:]...)
 
-		if err == io.EOF {
-			break
-		}
-	}
-	_ = file.Close()
-
-	adding := "\n\tID int\n"
-	writing := string(data[:pos+7]) + adding + string(data[pos+len(adding)-1:])
-
-	file, _ = os.OpenFile(filename, os.O_WRONLY, os.ModeAppend)
-	_, _ = file.WriteString(writing)
-
-	_ = file.Close()
+	collection.Structs[index].Fields = fields
 }

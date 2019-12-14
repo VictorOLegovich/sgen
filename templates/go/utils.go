@@ -7,16 +7,17 @@ import (
 	"strings"
 )
 
-func parameters(fields []collection.Field) (parameters string) {
-	for key, field := range fields {
-		if key < len(fields) {
-			parameters += field.Name + " " + field.Type + ", "
-		} else {
-			parameters += field.Name + " " + field.Type
-		}
+const (
+	errCheck string = "\tif err != nil {\n\t\treturn err\n\t}\n\n"
+	errVar   string = "var err error"
+)
 
+func err(returning string, tabs int) string {
+	var tab string
+	for i := 0; i < tabs; i++ {
+		tab += "\t"
 	}
-	return parameters
+	return tab + "if err != nil {\n" + tab + "\treturn " + returning + "\n" + tab + "}\n\n"
 }
 
 func formatTheCamelCase(s string) string {
@@ -69,22 +70,25 @@ func scanningPreparation(
 	}
 
 	for _, field := range fields {
+		if field.Name == "ID" && withId {
+			if types.IsSimpleType(field.Type) {
+				if lineBreak {
+					prepared += tabPrefix + "&" + varName + "." + field.Name + ",\n"
+				} else {
+					prepared += "&" + varName + "." + field.Name + ","
+				}
+			}
+			continue
+		} else if field.Name == "ID" && !withId {
+			continue
+		}
 		if types.IsSimpleType(field.Type) {
 			if lineBreak {
 				prepared += tabPrefix + "&" + varName + "." + field.Name + ",\n"
 			} else {
-				prepared += tabPrefix + "&" + varName + "." + field.Name + ","
+				prepared += "&" + varName + "." + field.Name + ","
 			}
 		}
 	}
 	return prepared
-}
-
-func hasNestedStructs(Struct collection.Struct) bool {
-	for _, field := range Struct.Fields {
-		if !types.IsSimpleType(field.Type) {
-			return true
-		}
-	}
-	return false
 }
