@@ -85,8 +85,8 @@ func (s *Select) Join(Join Join, ThisField, AttachedField, AttachedTable, Condit
 	}
 
 	sqlCollection := []string{
-		Join.string(), " Join ", AttachedTable, " On ",
-		s.table, ".", ThisField, Condition, AttachedTable, ".", AttachedField, " ",
+		Join.string(), " Join ", AttachedTable, " On ", qb.DBName, ".",
+		s.table, ".", ThisField, Condition, qb.DBName, ".", AttachedTable, ".", AttachedField, " ",
 	}
 
 	for _, sqlWord := range sqlCollection {

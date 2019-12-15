@@ -104,7 +104,7 @@ func (t *Template) optionalOne(Struct collection.Struct) string {
 		storagesInit += "\t" + csName + " := " + lcCsName + "_storage.New" + child.StructName + "Storage(nil)\n"
 		getting += "\tif " + lcName + "." + child.Name + ", err = " +
 			csName + ".Get" + child.Name + "By" + name + "ID(" + name + "ID);err != nil{\n" +
-			"\t\treturn nil, err\n\t}\n\n"
+			"\t\tprintln(err.Error())\n\t}\n\n"
 	}
 
 	body += storagesInit + "\n" + getting + "\n" + adding + "\n\treturn " + lcName + ", nil\n}\n\n"
@@ -133,10 +133,13 @@ func (t *Template) optionalList(Struct collection.Struct) string {
 		csName := child.StructName
 		lcCsName := strings.ToLower(csName)
 
-		storagesInit += "\t" + csvar + " := " + lcCsName + "_storage.New" + csName + "Storage(nil)\n"
-		getting += "\t\tif " + lcName + "." + child.Name + ", err = " +
-			csvar + ".Get" + child.Name + "By" + name + "ID(" + lcName + ".ID); err != nil{\n" +
-			"\t\t\treturn nil, err\n\t\t}\n"
+		storagesInit += "\t" + csvar + " := " + lcCsName + "_storage.New" + csName + "Storage(s.db)\n"
+
+		getting +=
+			"\t\tif " + lcName + "." + child.Name + " != nil{" +
+				"\t\tif " + lcName + "." + child.Name + ", err = " +
+				csvar + ".Get" + child.Name + "By" + name + "ID(" + lcName + ".ID); err != nil{\n" +
+				"\t\t\tprintln(err.Error())\n\t\t}\n\t}"
 	}
 
 	body += storagesInit + "\n" +
@@ -197,7 +200,7 @@ func (t *Template) optionalExec(Struct collection.Struct, operation string) stri
 
 		storageVar := lcCsName + "Storage"
 
-		storagesInit += "\t" + storageVar + " := " + lcCsName + "_storage." + "New" + csName + "Storage(nil)\n"
+		storagesInit += "\t" + storageVar + " := " + lcCsName + "_storage." + "New" + csName + "Storage(s.db)\n"
 		storageCall += "\n\tif err = " + storageVar + "." + operation + "(" + lcName + "." + child.Name + ");" +
 			" err != nil {\n\t\treturn err\n\t}\n"
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/victorolegovich/sgen/templates/go/general"
 	"github.com/victorolegovich/sgen/templates/sql/query_builder"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,12 +48,12 @@ func (fm *FileManager) Deploy() error {
 }
 
 func (fm *FileManager) createBaseDirectories() error {
-	general, _ := filepath.Abs(fm.settings.DatabaseDir + "/general")
+	genDir, _ := filepath.Abs(fm.settings.DatabaseDir + "/general")
 	storages, _ := filepath.Abs(fm.settings.DatabaseDir + "/storages")
-	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db")
-	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/query_builder")
+	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/genDir/db")
+	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/genDir/query_builder")
 
-	dirs := []string{general, storages, database, queryBuilder}
+	dirs := []string{genDir, storages, database, queryBuilder}
 	for _, dir := range dirs {
 		if err := os.Mkdir(dir, os.ModePerm); err != nil && os.IsNotExist(err) {
 			return err
@@ -130,101 +129,6 @@ func (fm *FileManager) createFiles() error {
 	}
 
 	return nil
-}
-
-func CopyFile(src, dst string) (err error) {
-	in, err := os.Open(src)
-	if err != nil {
-		return
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return
-	}
-	defer func() {
-		if e := out.Close(); e != nil {
-			err = e
-		}
-	}()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return
-	}
-
-	err = out.Sync()
-	if err != nil {
-		return
-	}
-
-	si, err := os.Stat(src)
-	if err != nil {
-		return
-	}
-	err = os.Chmod(dst, si.Mode())
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func CopyDir(src string, dst string) (err error) {
-	src = filepath.Clean(src)
-	dst = filepath.Clean(dst)
-
-	si, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	if !si.IsDir() {
-		return fmt.Errorf("source is not a directory")
-	}
-
-	_, err = os.Stat(dst)
-	if err != nil && !os.IsNotExist(err) {
-		return
-	}
-
-	err = os.MkdirAll(dst, si.Mode())
-	if err != nil {
-		return
-	}
-
-	entries, err := ioutil.ReadDir(src)
-	if err != nil {
-		return
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			err = CopyDir(srcPath, dstPath)
-			if err != nil {
-				return
-			}
-		} else {
-			// Skip symlinks.
-			if entry.Mode()&os.ModeSymlink != 0 {
-				continue
-			}
-
-			err = CopyFile(srcPath, dstPath)
-			if err != nil {
-				return
-			}
-		}
-	}
-
-	return
-}
-
-func DeleteDir(del string) error {
-	return os.RemoveAll(del)
 }
 
 func AddToFile(filename, exp, needle string, scope Scope) error {

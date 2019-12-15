@@ -78,6 +78,7 @@ func getPH(driver string) *ph {
 	case settings.PostgreSQL:
 		ph.self = postgrsql
 		ph.inc = true
+		ph.incNum = 1
 		return ph
 	default:
 		return ph

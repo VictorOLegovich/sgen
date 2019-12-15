@@ -8,16 +8,16 @@ import (
 )
 
 type QueryBuilder struct {
-	Table, Driver    string
-	USet, ISet, SSet []string
-	setsInit         bool
+	Table, Driver, DBName   string
+	USet, ISet, SSet        []string
+	setsInit         		bool
 	*ph
 }
 
 const Set string = "set"
 
-func NewQueryBuilder(Table string, Driver string) *QueryBuilder {
-	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, ph: getPH(Driver)}
+func NewQueryBuilder(Table, Driver, DBName string) *QueryBuilder {
+	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, DBName: DBName, ph: getPH(Driver)}
 }
 
 func (qb *QueryBuilder) InitSets(USet, ISet, SSet []string) {
@@ -32,7 +32,7 @@ func (qb *QueryBuilder) Insert() *Insert {
 
 	var sql strings.Builder
 
-	elems := []string{"Insert Into ", qb.Table, " (", parameters(qb.SSet), ") Values ("}
+	elems := []string{"Insert Into ",qb.DBName, ".",qb.Table , " (", parameters(qb.ISet), ") Values ("}
 
 	for i := 0; i < len(qb.ISet); i++ {
 		elems = append(elems, qb.ph.Next())
@@ -56,10 +56,10 @@ func (qb *QueryBuilder) Select(what string) *Select {
 	)
 
 	if what == Set {
-		what = parameters(qb.ISet)
+		what = parameters(qb.SSet)
 	}
 
-	elems := []string{"Select ", what, "From ", strings.ToLower(qb.Table), " "}
+	elems := []string{"Select ", what, "From ", qb.DBName, ".", strings.ToLower(qb.Table), " "}
 
 	for _, elem := range elems {
 		sql.WriteString(elem)
@@ -76,7 +76,7 @@ func (qb *QueryBuilder) Update(what string) *Update {
 		os.Exit(1)
 	}
 
-	elems := []string{"Update ", strings.ToLower(qb.Table), " Set"}
+	elems := []string{"Update ", qb.DBName, ".", strings.ToLower(qb.Table), " Set"}
 
 	if what == Set {
 		for k, field := range qb.USet {
@@ -99,7 +99,7 @@ func (qb *QueryBuilder) Update(what string) *Update {
 func (qb *QueryBuilder) Delete() *Delete {
 	var sql strings.Builder
 
-	elems := []string{"Delete From ", qb.Table, " "}
+	elems := []string{"Delete From ", qb.DBName, ".", qb.Table, " "}
 
 	for _, elem := range elems {
 		sql.WriteString(elem)
