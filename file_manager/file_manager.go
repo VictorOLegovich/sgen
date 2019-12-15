@@ -50,8 +50,8 @@ func (fm *FileManager) Deploy() error {
 func (fm *FileManager) createBaseDirectories() error {
 	genDir, _ := filepath.Abs(fm.settings.DatabaseDir + "/general")
 	storages, _ := filepath.Abs(fm.settings.DatabaseDir + "/storages")
-	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/genDir/db")
-	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/genDir/query_builder")
+	database, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/db")
+	queryBuilder, _ := filepath.Abs(fm.settings.DatabaseDir + "/general/query_builder")
 
 	dirs := []string{genDir, storages, database, queryBuilder}
 	for _, dir := range dirs {
