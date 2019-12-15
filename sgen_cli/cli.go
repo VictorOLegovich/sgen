@@ -20,13 +20,12 @@ func Run() error {
 			Aliases: []string{"gen", "-g", "g"},
 			Usage:   "main generate command",
 			Action: func(c *cli.Context) error {
-				gen := generator.Generator{}
 				if _, err := os.Stat(c.Args().First()); os.IsNotExist(err) {
 					if files, err := ioutil.ReadDir("."); err == nil {
 						for _, file := range files {
 							if file.Name() == settingsFile {
 								path, _ := filepath.Abs(".")
-								if err := gen.Generate(filepath.Join(path, settingsFile)); err != nil {
+								if err := generator.Generate(filepath.Join(path, settingsFile)); err != nil {
 									return err
 								} else {
 									return nil
@@ -37,7 +36,7 @@ func Run() error {
 					return errors.New("File not exist: " + c.Args().First())
 				}
 
-				if err := gen.Generate(c.Args().First()); err != nil {
+				if err := generator.Generate(c.Args().First()); err != nil {
 					return err
 				}
 

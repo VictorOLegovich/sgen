@@ -76,11 +76,12 @@ func (t *Template) newStorage(Struct collection.Struct) string {
 	driver := "\"" + t.settings.SqlDriver + "\""
 
 	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(Struct.Name) + "\", " + driver + ")\n"
-	initSets := "\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")"
+	initSets := "\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")\n"
+	setDBName := "\tqBuilder.SetDBName(\"\")"
 
 	body := "{\n" +
 		"\t" + childStorages + "\n" +
-		"\t" + newQb + initSets + "\n\n" +
+		"\t" + newQb + initSets + setDBName + "\n\n" +
 		"\treturn &" + Struct.Name + "Storage{db: db, qb: qBuilder" + transferStorages + "}\n}\n\n"
 
 	return decl + body

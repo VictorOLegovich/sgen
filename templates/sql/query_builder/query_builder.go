@@ -17,7 +17,7 @@ type QueryBuilder struct {
 const Set string = "set"
 
 func NewQueryBuilder(Table, Driver string) *QueryBuilder {
-	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, dbName: DBName, ph: getPH(Driver)}
+	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, ph: getPH(Driver)}
 }
 
 func (qb *QueryBuilder) SetDBName(dbName string) {
@@ -81,7 +81,7 @@ func (qb *QueryBuilder) Select(what string) *Select {
 		sql.WriteString(elem)
 	}
 
-	return newSelect(qb.Table, qb.Driver, qb.dbName, &sql, qb.ph)
+	return newSelect(qb.Table, qb.Driver, &sql, qb.ph, qb.dbName)
 }
 
 func (qb *QueryBuilder) Update(what string) *Update {

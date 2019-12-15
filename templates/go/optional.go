@@ -161,9 +161,9 @@ func (t *Template) optionalExec(Struct collection.Struct, operation string) stri
 		lb = true
 	}
 	switch operation {
-	case "Delete", "Update":
+	case "Delete":
 		withId = true
-	case "Create":
+	case "Create", "Update":
 		withId = false
 	}
 
