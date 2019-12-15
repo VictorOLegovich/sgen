@@ -5,9 +5,12 @@ import (
 	"github.com/urfave/cli"
 	"github.com/victorolegovich/sgen/generator"
 	"github.com/victorolegovich/sgen/settings"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
+
+const settingsFile string = "sgen.json"
 
 func Run() error {
 	app := cli.NewApp()
@@ -17,10 +20,22 @@ func Run() error {
 			Aliases: []string{"gen", "-g", "g"},
 			Usage:   "main generate command",
 			Action: func(c *cli.Context) error {
+				gen := generator.Generator{}
 				if _, err := os.Stat(c.Args().First()); os.IsNotExist(err) {
+					if files, err := ioutil.ReadDir("."); err == nil {
+						for _, file := range files {
+							if file.Name() == settingsFile {
+								path, _ := filepath.Abs(".")
+								if err := gen.Generate(filepath.Join(path, settingsFile)); err != nil {
+									return err
+								} else {
+									return nil
+								}
+							}
+						}
+					}
 					return errors.New("File not exist: " + c.Args().First())
 				}
-				gen := generator.Generator{}
 
 				if err := gen.Generate(c.Args().First()); err != nil {
 					return err
@@ -34,16 +49,9 @@ func Run() error {
 			Aliases: []string{"settings"},
 			Usage:   "getting settings file",
 			Action: func(c *cli.Context) error {
-				targetDir, err := filepath.Abs(c.Args().First())
-				if err != nil {
-					return err
-				}
+				targetDir, _ := filepath.Abs(".")
 
-				if _, err := os.Stat(c.Args().First()); os.IsNotExist(err) {
-					return errors.New("Dir is not exist: " + c.Args().First())
-				}
-
-				file, err := os.Create(filepath.Join(targetDir, "settings.json"))
+				file, err := os.Create(filepath.Join(targetDir, settingsFile))
 				if err != nil {
 					return err
 				}

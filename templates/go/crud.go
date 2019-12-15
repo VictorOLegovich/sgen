@@ -37,7 +37,7 @@ func (t *Template) c(Struct collection.Struct) string {
 	preparation := scanningPreparation(lcName, Struct.Fields, lb, false, 1)
 	prepNil = preparation == ""
 
-	decl := "func (s *" + name + "Storage) " + "Create(" + lcName + " " + name + ") error"
+	decl := "func (s *" + name + "Storage) " + "Create(" + lcName + " *" + name + ") error"
 
 	if !prepNil {
 		query = "query := s.qb.Insert().SQLString()"
@@ -64,7 +64,7 @@ func (t *Template) u(Struct collection.Struct) string {
 	name := Struct.Name
 	lcName := strings.ToLower(name)
 
-	decl := "func (s *" + name + "Storage) Update(" + lcName + " " + name + ") error"
+	decl := "func (s *" + name + "Storage) Update(" + lcName + " *" + name + ") error"
 	query := "query := s.qb.Update(qb.Set).Where(\"ID\", \"=\").SQLString()"
 
 	preparation := scanningPreparation(strings.ToLower(Struct.Name), Struct.Fields, lb, true, 1)
@@ -83,7 +83,7 @@ func (t *Template) d(Struct collection.Struct) string {
 	name := Struct.Name
 	lcName := strings.ToLower(Struct.Name)
 
-	decl := "func (s *" + name + "Storage) Delete(" + lcName + " " + name + ") error"
+	decl := "func (s *" + name + "Storage) Delete(" + lcName + " *" + name + ") error"
 	query := `query := s.qb.Delete().Where("ID","=").SQLString()`
 	dbCall := t.libInsert.toExec(lcName+".ID", false)
 	body := "{\n\t" + errVar + "\n\t" + query + "\n\n" + dbCall + "\n\treturn err\n}\n\n"

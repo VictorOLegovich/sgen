@@ -10,14 +10,14 @@ import (
 )
 
 type Select struct {
-	table, driver string
-	sql           *strings.Builder
+	table, driver, dbName string
+	sql                   *strings.Builder
 	*ph
 	sops []sop
 }
 
-func newSelect(table, driver string, sql *strings.Builder, ph *ph) *Select {
-	return &Select{table, driver, sql, ph, []sop{}}
+func newSelect(table, driver string, sql *strings.Builder, ph *ph, dbName string) *Select {
+	return &Select{table, driver, dbName, sql, ph, []sop{}}
 }
 
 //////////////////////////////////////
@@ -79,14 +79,20 @@ func (s *Select) GroupBy(field string) *Select {
 func (s *Select) Join(Join Join, ThisField, AttachedField, AttachedTable, Condition string) *Select {
 	checkCondition(Condition)
 
+	var dbName string
+
+	if s.dbName != "" {
+		dbName = strings.Join([]string{s.dbName, "."}, "")
+	}
+
 	if err := s.addOp(join); err != nil {
 		println(err.Error())
 		os.Exit(1)
 	}
 
 	sqlCollection := []string{
-		Join.string(), " Join ", AttachedTable, " On ", qb.DBName, ".",
-		s.table, ".", ThisField, Condition, qb.DBName, ".", AttachedTable, ".", AttachedField, " ",
+		Join.string(), " Join ", AttachedTable, " On ", dbName,
+		s.table, ".", ThisField, Condition, dbName, AttachedTable, ".", AttachedField, " ",
 	}
 
 	for _, sqlWord := range sqlCollection {

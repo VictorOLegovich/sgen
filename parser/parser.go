@@ -126,13 +126,22 @@ func fields(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Compli
 				Field.Name, Field.Type = ftype.Name, ftype.Name
 				parent = true
 				Fields = append(Fields, Field)
+			case *ast.StarExpr:
+				switch x := ftype.X.(type) {
+				case *ast.Ident:
+					Child.StructName, Child.Type, Child.Name = x.Name, "*"+x.Name, x.Name
+					Childes = append(Childes, Child)
+					Field.Name, Field.Type = x.Name, x.Name
+					parent = true
+					Fields = append(Fields, Field)
+				}
 			}
 		}
 
 		for _, ident := range field.Names {
 			Field.Name = ident.Name
 
-			comp, child := defineFieldType(field, &Field)
+			comp, child := fieldType(field, &Field)
 
 			if comp != c.Empty {
 				Complicated[Field.Name] = comp
@@ -151,7 +160,7 @@ func fields(s *ast.StructType) (Fields []c.Field, Childes []c.RootObject, Compli
 	return Fields, Childes, Complicated, parent
 }
 
-func defineFieldType(field *ast.Field, Field *c.Field) (complicated c.Complicated, child c.RootObject) {
+func fieldType(field *ast.Field, Field *c.Field) (complicated c.Complicated, child c.RootObject) {
 	complicated = c.Empty
 
 	switch ftype := field.Type.(type) {

@@ -1,6 +1,6 @@
 package query_builder
 
-const QueryBuilder string = `package query_builder
+const QueryBuilder = `package query_builder
 
 import (
 	"os"
@@ -8,16 +8,20 @@ import (
 )
 
 type QueryBuilder struct {
-	Table, Driver, DBName   string
-	USet, ISet, SSet        []string
-	setsInit         		bool
+	Table, Driver, dbName string
+	USet, ISet, SSet      []string
+	setsInit              bool
 	*ph
 }
 
 const Set string = "set"
 
-func NewQueryBuilder(Table, Driver, DBName string) *QueryBuilder {
-	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, DBName: DBName, ph: getPH(Driver)}
+func NewQueryBuilder(Table, Driver string) *QueryBuilder {
+	return &QueryBuilder{Table: strings.ToLower(Table), Driver: Driver, dbName: DBName, ph: getPH(Driver)}
+}
+
+func (qb *QueryBuilder) SetDBName(dbName string) {
+	qb.dbName = dbName
 }
 
 func (qb *QueryBuilder) InitSets(USet, ISet, SSet []string) {
@@ -30,9 +34,16 @@ func (qb *QueryBuilder) Insert() *Insert {
 		os.Exit(1)
 	}
 
-	var sql strings.Builder
+	var (
+		sql    strings.Builder
+		dbName string
+	)
 
-	elems := []string{"Insert Into ",qb.DBName, ".",qb.Table , " (", parameters(qb.ISet), ") Values ("}
+	if qb.dbName != "" {
+		dbName = strings.Join([]string{qb.dbName, "."}, "")
+	}
+
+	elems := []string{"Insert Into ", dbName, qb.Table, " (", parameters(qb.ISet), ") Values ("}
 
 	for i := 0; i < len(qb.ISet); i++ {
 		elems = append(elems, qb.ph.Next())
@@ -52,31 +63,43 @@ func (qb *QueryBuilder) Insert() *Insert {
 
 func (qb *QueryBuilder) Select(what string) *Select {
 	var (
-		sql strings.Builder
+		sql    strings.Builder
+		dbName string
 	)
 
 	if what == Set {
 		what = parameters(qb.SSet)
 	}
 
-	elems := []string{"Select ", what, "From ", qb.DBName, ".", strings.ToLower(qb.Table), " "}
+	if qb.dbName != "" {
+		dbName = strings.Join([]string{qb.dbName, "."}, "")
+	}
+
+	elems := []string{"Select ", what, "From ", dbName, strings.ToLower(qb.Table), " "}
 
 	for _, elem := range elems {
 		sql.WriteString(elem)
 	}
 
-	return newSelect(qb.Table, qb.Driver, &sql, qb.ph)
+	return newSelect(qb.Table, qb.Driver, qb.dbName, &sql, qb.ph)
 }
 
 func (qb *QueryBuilder) Update(what string) *Update {
-	var sql strings.Builder
+	var (
+		sql    strings.Builder
+		dbName string
+	)
 
 	if !qb.setsInit {
 		println("This operation can only be used if the field sets in the database are transferred")
 		os.Exit(1)
 	}
 
-	elems := []string{"Update ", qb.DBName, ".", strings.ToLower(qb.Table), " Set"}
+	if qb.dbName != "" {
+		dbName = strings.Join([]string{qb.dbName, "."}, "")
+	}
+
+	elems := []string{"Update ", dbName, strings.ToLower(qb.Table), " Set"}
 
 	if what == Set {
 		for k, field := range qb.USet {
@@ -97,9 +120,16 @@ func (qb *QueryBuilder) Update(what string) *Update {
 }
 
 func (qb *QueryBuilder) Delete() *Delete {
-	var sql strings.Builder
+	var (
+		sql    strings.Builder
+		dbName string
+	)
 
-	elems := []string{"Delete From ", qb.DBName, ".", qb.Table, " "}
+	if qb.dbName != "" {
+		dbName = strings.Join([]string{qb.dbName, "."}, "")
+	}
+
+	elems := []string{"Delete From ", dbName, qb.Table, " "}
 
 	for _, elem := range elems {
 		sql.WriteString(elem)
@@ -107,4 +137,5 @@ func (qb *QueryBuilder) Delete() *Delete {
 
 	return newDelete(&sql, qb.ph)
 }
+
 `

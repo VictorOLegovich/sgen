@@ -52,6 +52,12 @@ func (t *Template) getByParentId(Struct collection.Struct) (withParent string) {
 			if parent == s.Name {
 				for _, child := range s.Childes {
 					if child.StructName == name {
+						var star string
+
+						if string(child.Type[0]) != "*" {
+							star = "*"
+						}
+
 						decl := "func (s *" + name + "Storage) Get" + name + "By" +
 							parent + "ID(" + parent + "ID int) (" + child.Type + ", error)"
 
@@ -64,7 +70,7 @@ func (t *Template) getByParentId(Struct collection.Struct) (withParent string) {
 							"\t" + variableDecl + "\n\n" +
 							"\t" + query + "\n\n\t" +
 							dbCallROne + "\n\n" +
-							"\treturn *" + variable + ", err\n}\n\n"
+							"\treturn " + star + variable + ", err\n}\n\n"
 
 						withParent += decl + body
 					}
@@ -99,11 +105,9 @@ func (t *Template) optionalOne(Struct collection.Struct) string {
 
 	for _, child := range Struct.Childes {
 		csName = strings.ToLower(child.StructName) + "Storage"
-		lcCsName := strings.ToLower(child.StructName)
 
-		storagesInit += "\t" + csName + " := " + lcCsName + "_storage.New" + child.StructName + "Storage(nil)\n"
 		getting += "\tif " + lcName + "." + child.Name + ", err = " +
-			csName + ".Get" + child.Name + "By" + name + "ID(" + name + "ID);err != nil{\n" +
+			"s." + csName + ".Get" + child.Name + "By" + name + "ID(" + name + "ID);err != nil{\n" +
 			"\t\tprintln(err.Error())\n\t}\n\n"
 	}
 
@@ -130,16 +134,10 @@ func (t *Template) optionalList(Struct collection.Struct) string {
 
 	for _, child := range Struct.Childes {
 		csvar = strings.ToLower(child.StructName) + "Storage"
-		csName := child.StructName
-		lcCsName := strings.ToLower(csName)
 
-		storagesInit += "\t" + csvar + " := " + lcCsName + "_storage.New" + csName + "Storage(s.db)\n"
-
-		getting +=
-			"\t\tif " + lcName + "." + child.Name + " != nil{" +
-				"\t\tif " + lcName + "." + child.Name + ", err = " +
-				csvar + ".Get" + child.Name + "By" + name + "ID(" + lcName + ".ID); err != nil{\n" +
-				"\t\t\tprintln(err.Error())\n\t\t}\n\t}"
+		getting += "\t\tif " + lcName + "." + child.Name + ", err = " +
+			"s." + csvar + ".Get" + child.Name + "By" + name + "ID(" + lcName + ".ID); err != nil{\n" +
+			"\t\t\tprintln(err.Error())\n\t\t}\n"
 	}
 
 	body += storagesInit + "\n" +
@@ -172,6 +170,10 @@ func (t *Template) optionalExec(Struct collection.Struct, operation string) stri
 	funcDecl = "func (s *" + name + "Storage)" + operation + "(" + lcName + " " + name + ") error"
 
 	preparation := scanningPreparation(lcName, Struct.Fields, lb, withId, 1)
+	if operation == "Delete" {
+		preparation = lcName + ".ID"
+	}
+
 	prepNil = preparation == ""
 
 	if !prepNil {
@@ -194,15 +196,28 @@ func (t *Template) optionalExec(Struct collection.Struct, operation string) stri
 
 	funcBody = "{\n\t" + errVar + "\n\n\t" + query + "\n" + exec + "\n"
 
+	var amp string
+	var nilCheckVar string
 	for _, child := range Struct.Childes {
+
 		csName := child.StructName
 		lcCsName := strings.ToLower(csName)
 
 		storageVar := lcCsName + "Storage"
 
-		storagesInit += "\t" + storageVar + " := " + lcCsName + "_storage." + "New" + csName + "Storage(s.db)\n"
-		storageCall += "\n\tif err = " + storageVar + "." + operation + "(" + lcName + "." + child.Name + ");" +
-			" err != nil {\n\t\treturn err\n\t}\n"
+		if string(child.Type[0]) != "*" {
+			amp = "&"
+		}
+
+		if amp != "" {
+			nilCheckVar = "(&" + lcName + "." + child.Name + ")"
+		} else {
+			nilCheckVar = lcName + "." + child.Name
+		}
+
+		storageCall += "\n\tif " + nilCheckVar + " != nil{" +
+			"\n\t\tif err = s." + storageVar + "." + operation + "(" + amp + lcName + "." + child.Name + ");" +
+			" err != nil {\n\t\treturn err\n\t}\n\t}\n"
 	}
 
 	funcBody += storagesInit + storageCall + "\n\treturn err\n}\n\n"

@@ -3,16 +3,61 @@ package general
 import "github.com/victorolegovich/sgen/settings"
 
 const (
-	mysql string = `package db
+	mysql string = `
+package db
 
 import (
 	"github.com/jmoiron/sqlx"
+	"os"
+	"strings"
 )
 
-const connection = ""
+type connection struct {
+	user, pass, dbname, sslmode string
+}
+
+func newConnection(user string, pass string, dbname string, sslmode string) *connection {
+	return &connection{user: user, pass: pass, dbname: dbname, sslmode: sslmode}
+}
+
+func (c *connection) string() string {
+	var builder strings.Builder
+
+	if c.user != "" {
+		builder.WriteString("user=")
+		builder.WriteString(c.user)
+		builder.WriteString(" ")
+	} else {
+		println(` + "`No \"user\" value is transmitted when connecting to the database `" + `)
+		os.Exit(1)
+	}
+
+	if c.pass != "" {
+		builder.WriteString("password=")
+		builder.WriteString(c.pass)
+		builder.WriteString(" ")
+	}
+
+	if c.dbname != "" {
+		builder.WriteString("dbname=")
+		builder.WriteString(c.dbname)
+		builder.WriteString(" ")
+	} else {
+		println(` + "`the dbname parameter is not specified, so you should specify it in query_builder if you use it`" + `)
+	}
+
+	if c.sslmode != "" {
+		builder.WriteString("sslmode=")
+		builder.WriteString(c.sslmode)
+	}
+
+	return builder.String()
+}
+
 
 func NewConnection() (*sqlx.DB, error) {
-	db, err := sqlx.Connect("mysql", connection)
+	connectionInfo := newConnection("postgres", "", "postgres", "disable").string()
+	db, err := sqlx.Connect("mysql", connectionInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -23,13 +68,56 @@ func NewConnection() (*sqlx.DB, error) {
 import (
 	"context"
 	"github.com/jackc/pgx"
+	"os"
+	"strings"
 )
 
-//Fill in the configuration
-const connection string = ""
+
+type connection struct {
+	user, pass, dbname, sslmode string
+}
+
+func newConnection(user string, pass string, dbname string, sslmode string) *connection {
+	return &connection{user: user, pass: pass, dbname: dbname, sslmode: sslmode}
+}
+
+func (c *connection) string() string {
+	var builder strings.Builder
+
+	if c.user != "" {
+		builder.WriteString("user=")
+		builder.WriteString(c.user)
+		builder.WriteString(" ")
+	} else {
+		println(` + "`No \"user\" value is transmitted when connecting to the database `" + `)
+		os.Exit(1)
+	}
+
+	if c.pass != "" {
+		builder.WriteString("password=")
+		builder.WriteString(c.pass)
+		builder.WriteString(" ")
+	}
+
+	if c.dbname != "" {
+		builder.WriteString("dbname=")
+		builder.WriteString(c.dbname)
+		builder.WriteString(" ")
+	} else {
+		println(` + "`the dbname parameter is not specified, so you should specify it in query_builder if you use it`" + `)
+	}
+
+	if c.sslmode != "" {
+		builder.WriteString("sslmode=")
+		builder.WriteString(c.sslmode)
+	}
+
+	return builder.String()
+}
 
 func NewConnection() (*pgx.Conn, error) {
-	conn, err := pgx.Connect(context.Background(), connection)
+	connectionInfo := newConnection("postgres", "", "postgres", "disable").string()
+	conn, err := pgx.Connect(context.Background(), connectionInfo)
 	if err != nil {
 		return nil, err
 	}

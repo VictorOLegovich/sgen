@@ -37,8 +37,8 @@ func (t *Template) Create() (files []File) {
 func (t *Template) mainTemplate(Struct collection.Struct) (temp string) {
 	temp += t.packaging(Struct.Name)
 	temp += t.imports(Struct)
-	temp += t.storageType(Struct.Name)
-	temp += t.newStorage(Struct.Name)
+	temp += t.storageType(Struct)
+	temp += t.newStorage(Struct)
 	temp += t.crud(Struct)
 	temp += t.getByParentId(Struct)
 	temp += t.getWithChildes(Struct)
@@ -47,24 +47,43 @@ func (t *Template) mainTemplate(Struct collection.Struct) (temp string) {
 }
 
 //generation of storage structure
-func (t *Template) storageType(strName string) string {
-	return "type " + strName + "Storage struct {\n" +
+func (t *Template) storageType(Struct collection.Struct) string {
+	typ := "type " + Struct.Name + "Storage struct {\n" +
 		"\tdb " + t.libInsert.toType() + "\n" +
-		"\tqb *qb.QueryBuilder\n" +
-		"}\n\n"
+		"\tqb *qb.QueryBuilder\n"
+	for _, child := range Struct.Childes {
+		typ += "\t" + strings.ToLower(child.Name) + "Storage *" +
+			strings.ToLower(child.Name) + "_storage." + child.Name + "Storage\n"
+	}
+	typ += "}\n\n"
+	return typ
 }
 
 //generation of the function of creating a new storage
-func (t *Template) newStorage(strName string) string {
-	decl := "func New" + strName + "Storage(db " + t.libInsert.toType() + ") *" + strName + "Storage"
+func (t *Template) newStorage(Struct collection.Struct) string {
+	var childStorages string
+	var transferStorages string
+
+	for _, child := range Struct.Childes {
+		lcCs := strings.ToLower(child.Name)
+		childStorages += "\t" + lcCs + "Storage := " + lcCs + "_storage.New(db)\n"
+		transferStorages += ", " + lcCs + "Storage: " + lcCs + "Storage"
+	}
+
+	decl := "func New(db " + t.libInsert.toType() + ") *" + Struct.Name + "Storage"
 
 	us, is, ss := "updateSet", "insertSet", "selectSet"
 	driver := "\"" + t.settings.SqlDriver + "\""
 
-	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(strName) + "\", " + driver + ")\n"
+	newQb := "\tqBuilder := qb.NewQueryBuilder(\"" + formatTheCamelCase(Struct.Name) + "\", " + driver + ")\n"
 	initSets := "\tqBuilder.InitSets(" + us + "," + is + "," + ss + ")"
 
-	return decl + "{\n" + newQb + initSets + "\n\n\treturn &" + strName + "Storage{db: db, qb: qBuilder}\n}\n\n"
+	body := "{\n" +
+		"\t" + childStorages + "\n" +
+		"\t" + newQb + initSets + "\n\n" +
+		"\treturn &" + Struct.Name + "Storage{db: db, qb: qBuilder" + transferStorages + "}\n}\n\n"
+
+	return decl + body
 }
 
 //package name generation
